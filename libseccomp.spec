@@ -1,7 +1,7 @@
 Summary: Enhanced seccomp library
 Name: libseccomp
 Version: 2.1.1
-Release: 0%{?dist}
+Release: 2%{?dist}
 ExclusiveArch: %{ix86} x86_64 %{arm}
 License: LGPLv2
 Group: System Environment/Libraries
@@ -39,7 +39,7 @@ Kernel.
 
 %build
 ./configure --prefix="%{_prefix}" --libdir="%{_libdir}"
-make V=1 %{?_smp_mflags}
+CFLAGS="%{optflags}" make V=1 %{?_smp_mflags}
 
 %install
 rm -rf "%{buildroot}"
@@ -70,6 +70,11 @@ make check
 %{_mandir}/man3/*
 
 %changelog
+* Thu Feb 27 2014 Paul Moore <pmoore@redhat.com> - 2.1.1-2
+- Build with CFLAGS="${optflags}" (RHBZ #1070774)
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 2.1.1-1
+- Mass rebuild 2013-12-27
+
 * Tue Nov  5 2013 Paul Moore <pmoore@redhat.com> - 2.1.1-0
 - New upstream version
 - Added a %check procedure for self-test during build
