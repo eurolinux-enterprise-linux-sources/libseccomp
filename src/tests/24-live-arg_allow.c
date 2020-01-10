@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 {
 	int rc;
 	int fd;
-	scmp_filter_ctx ctx;
+	scmp_filter_ctx ctx = NULL;
 	const char buf[] = "testing";
 	ssize_t buf_len = strlen(buf);
 
@@ -56,22 +56,22 @@ int main(int argc, char *argv[])
 
 	ctx = seccomp_init(SCMP_ACT_TRAP);
 	if (ctx == NULL)
-		goto out;
-	rc = seccomp_rule_add_exact(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 1,
-				    SCMP_A0(SCMP_CMP_EQ, fd));
+		return ENOMEM;
+
+	rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 1,
+			      SCMP_A0(SCMP_CMP_EQ, fd));
 	if (rc != 0)
 		goto out;
-	rc = seccomp_rule_add_exact(ctx, SCMP_ACT_ALLOW, SCMP_SYS(close), 0);
+	rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(close), 0);
 	if (rc != 0)
 		goto out;
-	rc = seccomp_rule_add_exact(ctx,
-				    SCMP_ACT_ALLOW, SCMP_SYS(rt_sigreturn), 0);
+	rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigreturn), 0);
 	if (rc != 0)
 		goto out;
-	rc = seccomp_rule_add_exact(ctx,
-				    SCMP_ACT_ALLOW, SCMP_SYS(exit_group), 0);
+	rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit_group), 0);
 	if (rc != 0)
 		goto out;
+
 	rc = seccomp_load(ctx);
 	if (rc != 0)
 		goto out;

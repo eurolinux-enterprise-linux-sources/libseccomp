@@ -27,6 +27,7 @@
 #include "arch-arm.h"
 
 #define __NR_OABI_SYSCALL_BASE	0x900000
+#define __ARM_NR_BASE		0x0f0000
 
 /* NOTE: we currently only support the ARM EABI, more info at the URL below:
  *       -> http://wiki.embeddedarm.com/wiki/EABI_vs_OABI */
@@ -36,9 +37,12 @@
 #define __NR_SYSCALL_BASE	__NR_OABI_SYSCALL_BASE
 #endif
 
-/* NOTE: based on Linux 3.8.0-rc5 */
+/* NOTE: based on Linux 3.19 */
 const struct arch_syscall_def arm_syscall_table[] = { \
 	/* NOTE: arm_sync_file_range() and sync_file_range2() share values */
+	{ "_llseek", (__NR_SYSCALL_BASE + 140) },
+	{ "_newselect", (__NR_SYSCALL_BASE + 142) },
+	{ "_sysctl", (__NR_SYSCALL_BASE + 149) },
 	{ "accept", (__NR_SYSCALL_BASE + 285) },
 	{ "accept4", (__NR_SYSCALL_BASE + 366) },
 	{ "access", (__NR_SYSCALL_BASE + 33) },
@@ -46,14 +50,18 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "add_key", (__NR_SYSCALL_BASE + 309) },
 	{ "adjtimex", (__NR_SYSCALL_BASE + 124) },
 	{ "afs_syscall", __PNR_afs_syscall },
-	{ "alarm", (__NR_SYSCALL_BASE + 27) },
+	{ "alarm", __PNR_alarm },
 	{ "arm_fadvise64_64", (__NR_SYSCALL_BASE + 270) },
 	{ "arm_sync_file_range", (__NR_SYSCALL_BASE + 341) },
 	{ "arch_prctl", __PNR_arch_prctl },
 	{ "bdflush", (__NR_SYSCALL_BASE + 134) },
 	{ "bind", (__NR_SYSCALL_BASE + 282) },
+	{ "bpf", (__NR_SYSCALL_BASE + 386) },
 	{ "break", __PNR_break },
+	{ "breakpoint", (__NR_SYSCALL_BASE + (__ARM_NR_BASE + 1)) },
 	{ "brk", (__NR_SYSCALL_BASE + 45) },
+	{ "cachectl", __PNR_cachectl },
+	{ "cacheflush", (__NR_SYSCALL_BASE + (__ARM_NR_BASE + 2)) },
 	{ "capget", (__NR_SYSCALL_BASE + 184) },
 	{ "capset", (__NR_SYSCALL_BASE + 185) },
 	{ "chdir", (__NR_SYSCALL_BASE + 12) },
@@ -85,6 +93,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "eventfd", (__NR_SYSCALL_BASE + 351) },
 	{ "eventfd2", (__NR_SYSCALL_BASE + 356) },
 	{ "execve", (__NR_SYSCALL_BASE + 11) },
+	{ "execveat", (__NR_SYSCALL_BASE + 387) },
 	{ "exit", (__NR_SYSCALL_BASE +  1) },
 	{ "exit_group", (__NR_SYSCALL_BASE + 248) },
 	{ "faccessat", (__NR_SYSCALL_BASE + 334) },
@@ -144,11 +153,12 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "getpmsg", __PNR_getpmsg },
 	{ "getppid", (__NR_SYSCALL_BASE + 64) },
 	{ "getpriority", (__NR_SYSCALL_BASE + 96) },
+	{ "getrandom", (__NR_SYSCALL_BASE + 384) },
 	{ "getresgid", (__NR_SYSCALL_BASE + 171) },
 	{ "getresgid32", (__NR_SYSCALL_BASE + 211) },
 	{ "getresuid", (__NR_SYSCALL_BASE + 165) },
 	{ "getresuid32", (__NR_SYSCALL_BASE + 209) },
-	{ "getrlimit", (__NR_SYSCALL_BASE + 76) },
+	{ "getrlimit", __PNR_getrlimit },
 	{ "getrusage", (__NR_SYSCALL_BASE + 77) },
 	{ "getsid", (__NR_SYSCALL_BASE + 147) },
 	{ "getsockname", (__NR_SYSCALL_BASE + 286) },
@@ -175,8 +185,9 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "iopl", __PNR_iopl },
 	{ "ioprio_get", (__NR_SYSCALL_BASE + 315) },
 	{ "ioprio_set", (__NR_SYSCALL_BASE + 314) },
-	{ "ipc", (__NR_SYSCALL_BASE + 117) },
-	{ "kcmp", __PNR_kcmp },
+	{ "ipc", __PNR_ipc },
+	{ "kcmp", (__NR_SYSCALL_BASE + 378) },
+	{ "kexec_file_load", __PNR_kexec_file_load },
 	{ "kexec_load", (__NR_SYSCALL_BASE + 347) },
 	{ "keyctl", (__NR_SYSCALL_BASE + 311) },
 	{ "kill", (__NR_SYSCALL_BASE + 37) },
@@ -188,7 +199,6 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "listen", (__NR_SYSCALL_BASE + 284) },
 	{ "listxattr", (__NR_SYSCALL_BASE + 232) },
 	{ "llistxattr", (__NR_SYSCALL_BASE + 233) },
-	{ "_llseek", (__NR_SYSCALL_BASE + 140) },
 	{ "lock", __PNR_lock },
 	{ "lookup_dcookie", (__NR_SYSCALL_BASE + 249) },
 	{ "lremovexattr", (__NR_SYSCALL_BASE + 236) },
@@ -198,6 +208,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "lstat64", (__NR_SYSCALL_BASE + 196) },
 	{ "madvise", (__NR_SYSCALL_BASE + 220) },
 	{ "mbind", (__NR_SYSCALL_BASE + 319) },
+	{ "memfd_create", (__NR_SYSCALL_BASE + 385) },
 	{ "migrate_pages", __PNR_migrate_pages },
 	{ "mincore", (__NR_SYSCALL_BASE + 219) },
 	{ "mkdir", (__NR_SYSCALL_BASE + 39) },
@@ -206,7 +217,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "mknodat", (__NR_SYSCALL_BASE + 324) },
 	{ "mlock", (__NR_SYSCALL_BASE + 150) },
 	{ "mlockall", (__NR_SYSCALL_BASE + 152) },
-	{ "mmap", (__NR_SYSCALL_BASE + 90) },
+	{ "mmap", __PNR_mmap },
 	{ "mmap2", (__NR_SYSCALL_BASE + 192) },
 	{ "modify_ldt", __PNR_modify_ldt },
 	{ "mount", (__NR_SYSCALL_BASE + 21) },
@@ -230,7 +241,6 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "munmap", (__NR_SYSCALL_BASE + 91) },
 	{ "name_to_handle_at", (__NR_SYSCALL_BASE + 370) },
 	{ "nanosleep", (__NR_SYSCALL_BASE + 162) },
-	{ "_newselect", (__NR_SYSCALL_BASE + 142) },
 	{ "newfstatat", __PNR_newfstatat },
 	{ "nfsservctl", (__NR_SYSCALL_BASE + 169) },
 	{ "nice", (__NR_SYSCALL_BASE + 34) },
@@ -239,6 +249,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "oldolduname", __PNR_oldolduname },
 	{ "oldstat", __PNR_oldstat },
 	{ "olduname", __PNR_olduname },
+	{ "oldwait4", __PNR_oldwait4 },
 	{ "open", (__NR_SYSCALL_BASE +  5) },
 	{ "open_by_handle_at", (__NR_SYSCALL_BASE + 371) },
 	{ "openat", (__NR_SYSCALL_BASE + 322) },
@@ -270,7 +281,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "quotactl", (__NR_SYSCALL_BASE + 131) },
 	{ "read", (__NR_SYSCALL_BASE +  3) },
 	{ "readahead", (__NR_SYSCALL_BASE + 225) },
-	{ "readdir", (__NR_SYSCALL_BASE + 89) },
+	{ "readdir", __PNR_readdir },
 	{ "readlink", (__NR_SYSCALL_BASE + 85) },
 	{ "readlinkat", (__NR_SYSCALL_BASE + 332) },
 	{ "readv", (__NR_SYSCALL_BASE + 145) },
@@ -283,6 +294,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "removexattr", (__NR_SYSCALL_BASE + 235) },
 	{ "rename", (__NR_SYSCALL_BASE + 38) },
 	{ "renameat", (__NR_SYSCALL_BASE + 329) },
+	{ "renameat2", (__NR_SYSCALL_BASE + 382) },
 	{ "request_key", (__NR_SYSCALL_BASE + 310) },
 	{ "restart_syscall", (__NR_SYSCALL_BASE +  0) },
 	{ "rmdir", (__NR_SYSCALL_BASE + 40) },
@@ -297,15 +309,18 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "sched_get_priority_max", (__NR_SYSCALL_BASE + 159) },
 	{ "sched_get_priority_min", (__NR_SYSCALL_BASE + 160) },
 	{ "sched_getaffinity", (__NR_SYSCALL_BASE + 242) },
+	{ "sched_getattr", (__NR_SYSCALL_BASE + 381) },
 	{ "sched_getparam", (__NR_SYSCALL_BASE + 155) },
 	{ "sched_getscheduler", (__NR_SYSCALL_BASE + 157) },
 	{ "sched_rr_get_interval", (__NR_SYSCALL_BASE + 161) },
 	{ "sched_setaffinity", (__NR_SYSCALL_BASE + 241) },
+	{ "sched_setattr", (__NR_SYSCALL_BASE + 380) },
 	{ "sched_setparam", (__NR_SYSCALL_BASE + 154) },
 	{ "sched_setscheduler", (__NR_SYSCALL_BASE + 156) },
 	{ "sched_yield", (__NR_SYSCALL_BASE + 158) },
+	{ "seccomp", (__NR_SYSCALL_BASE + 383) },
 	{ "security", __PNR_security },
-	{ "select", (__NR_SYSCALL_BASE + 82) },
+	{ "select", __PNR_select },
 	{ "semctl", (__NR_SYSCALL_BASE + 300) },
 	{ "semget", (__NR_SYSCALL_BASE + 299) },
 	{ "semop", (__NR_SYSCALL_BASE + 298) },
@@ -320,6 +335,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "set_robust_list", (__NR_SYSCALL_BASE + 338) },
 	{ "set_thread_area", __PNR_set_thread_area },
 	{ "set_tid_address", (__NR_SYSCALL_BASE + 256) },
+	{ "set_tls", (__NR_SYSCALL_BASE + (__ARM_NR_BASE + 5)) },
 	{ "setdomainname", (__NR_SYSCALL_BASE + 121) },
 	{ "setfsgid", (__NR_SYSCALL_BASE + 139) },
 	{ "setfsgid32", (__NR_SYSCALL_BASE + 216) },
@@ -365,7 +381,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "sigreturn", (__NR_SYSCALL_BASE + 119) },
 	{ "sigsuspend", (__NR_SYSCALL_BASE + 72) },
 	{ "socket", (__NR_SYSCALL_BASE + 281) },
-	{ "socketcall", (__NR_SYSCALL_BASE + 102) },
+	{ "socketcall", __PNR_socketcall },
 	{ "socketpair", (__NR_SYSCALL_BASE + 288) },
 	{ "splice", (__NR_SYSCALL_BASE + 340) },
 	{ "ssetmask", __PNR_ssetmask },
@@ -373,7 +389,7 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "stat64", (__NR_SYSCALL_BASE + 195) },
 	{ "statfs", (__NR_SYSCALL_BASE + 99) },
 	{ "statfs64", (__NR_SYSCALL_BASE + 266) },
-	{ "stime", (__NR_SYSCALL_BASE + 25) },
+	{ "stime", __PNR_stime },
 	{ "stty", __PNR_stty },
 	{ "swapoff", (__NR_SYSCALL_BASE + 115) },
 	{ "swapon", (__NR_SYSCALL_BASE + 87) },
@@ -383,19 +399,20 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "sync_file_range", __PNR_sync_file_range },
 	{ "sync_file_range2", (__NR_SYSCALL_BASE + 341) },
 	{ "syncfs", (__NR_SYSCALL_BASE + 373) },
-	{ "syscall", (__NR_SYSCALL_BASE + 113) },
-	{ "_sysctl", (__NR_SYSCALL_BASE + 149) },
+	{ "syscall", __PNR_syscall },
 	{ "sysfs", (__NR_SYSCALL_BASE + 135) },
 	{ "sysinfo", (__NR_SYSCALL_BASE + 116) },
 	{ "syslog", (__NR_SYSCALL_BASE + 103) },
+	{ "sysmips", __PNR_sysmips },
 	{ "tee", (__NR_SYSCALL_BASE + 342) },
 	{ "tgkill", (__NR_SYSCALL_BASE + 268) },
-	{ "time", (__NR_SYSCALL_BASE + 13) },
+	{ "time", __PNR_time },
 	{ "timer_create", (__NR_SYSCALL_BASE + 257) },
 	{ "timer_delete", (__NR_SYSCALL_BASE + 261) },
 	{ "timer_getoverrun", (__NR_SYSCALL_BASE + 260) },
 	{ "timer_gettime", (__NR_SYSCALL_BASE + 259) },
 	{ "timer_settime", (__NR_SYSCALL_BASE + 258) },
+	{ "timerfd", __PNR_timerfd },
 	{ "timerfd_create", (__NR_SYSCALL_BASE + 350) },
 	{ "timerfd_gettime", (__NR_SYSCALL_BASE + 354) },
 	{ "timerfd_settime", (__NR_SYSCALL_BASE + 353) },
@@ -407,15 +424,17 @@ const struct arch_syscall_def arm_syscall_table[] = { \
 	{ "ugetrlimit", (__NR_SYSCALL_BASE + 191) },
 	{ "ulimit", __PNR_ulimit },
 	{ "umask", (__NR_SYSCALL_BASE + 60) },
-	{ "umount", (__NR_SYSCALL_BASE + 22) },
+	{ "umount", __PNR_umount },
 	{ "umount2", (__NR_SYSCALL_BASE + 52) },
 	{ "uname", (__NR_SYSCALL_BASE + 122) },
 	{ "unlink", (__NR_SYSCALL_BASE + 10) },
 	{ "unlinkat", (__NR_SYSCALL_BASE + 328) },
 	{ "unshare", (__NR_SYSCALL_BASE + 337) },
 	{ "uselib", (__NR_SYSCALL_BASE + 86) },
+	{ "usr26", (__NR_SYSCALL_BASE + (__ARM_NR_BASE + 3)) },
+	{ "usr32", (__NR_SYSCALL_BASE + (__ARM_NR_BASE + 4)) },
 	{ "ustat", (__NR_SYSCALL_BASE + 62) },
-	{ "utime", (__NR_SYSCALL_BASE + 30) },
+	{ "utime", __PNR_utime },
 	{ "utimensat", (__NR_SYSCALL_BASE + 348) },
 	{ "utimes", (__NR_SYSCALL_BASE + 269) },
 	{ "vfork", (__NR_SYSCALL_BASE + 190) },
@@ -476,4 +495,18 @@ const char *arm_syscall_resolve_num(int num)
 	}
 
 	return NULL;
+}
+
+/**
+ * Iterate through the syscall table and return the syscall name
+ * @param spot the offset into the syscall table
+ *
+ * Return the syscall name at position @spot or NULL on failure.  This function
+ * should only ever be used internally by libseccomp.
+ *
+ */
+const char *arm_syscall_iterate_name(unsigned int spot)
+{
+	/* XXX - no safety checks here */
+	return arm_syscall_table[spot].name;
 }

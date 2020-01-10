@@ -26,8 +26,11 @@
 #include "arch.h"
 #include "arch-x86_64.h"
 
-/* NOTE: based on Linux 3.4.7 */
+/* NOTE: based on Linux 3.19 */
 const struct arch_syscall_def x86_64_syscall_table[] = { \
+	{ "_llseek", __PNR__llseek },
+	{ "_newselect", __PNR__newselect },
+	{ "_sysctl", 156 },
 	{ "accept", 43 },
 	{ "accept4", 288 },
 	{ "access", 21 },
@@ -41,8 +44,12 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "arch_prctl", 158 },
 	{ "bdflush", __PNR_bdflush },
 	{ "bind", 49 },
+	{ "bpf", 321 },
 	{ "break", __PNR_break },
+	{ "breakpoint", __PNR_breakpoint },
 	{ "brk", 12 },
+	{ "cachectl", __PNR_cachectl },
+	{ "cacheflush", __PNR_cacheflush },
 	{ "capget", 125 },
 	{ "capset", 126 },
 	{ "chdir", 80 },
@@ -74,6 +81,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "eventfd", 284 },
 	{ "eventfd2", 290 },
 	{ "execve", 59 },
+	{ "execveat", 322 },
 	{ "exit", 60 },
 	{ "exit_group", 231 },
 	{ "faccessat", 269 },
@@ -92,7 +100,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "fcntl64", __PNR_fcntl64 },
 	{ "fdatasync", 75 },
 	{ "fgetxattr", 193 },
-	{ "finit_module", __PNR_finit_module },
+	{ "finit_module", 313 },
 	{ "flistxattr", 196 },
 	{ "flock", 73 },
 	{ "fork", 57 },
@@ -133,6 +141,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "getpmsg", 181 },
 	{ "getppid", 110 },
 	{ "getpriority", 140 },
+	{ "getrandom", 318 },
 	{ "getresgid", 120 },
 	{ "getresgid32", __PNR_getresgid32 },
 	{ "getresuid", 118 },
@@ -166,6 +175,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "ioprio_set", 251 },
 	{ "ipc", __PNR_ipc },
 	{ "kcmp", 312 },
+	{ "kexec_file_load", 320 },
 	{ "kexec_load", 246 },
 	{ "keyctl", 250 },
 	{ "kill", 62 },
@@ -177,7 +187,6 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "listen", 50 },
 	{ "listxattr", 194 },
 	{ "llistxattr", 195 },
-	{ "_llseek", __PNR__llseek },
 	{ "lock", __PNR_lock },
 	{ "lookup_dcookie", 212 },
 	{ "lremovexattr", 198 },
@@ -187,6 +196,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "lstat64", __PNR_lstat64 },
 	{ "madvise", 28 },
 	{ "mbind", 237 },
+	{ "memfd_create", 319 },
 	{ "migrate_pages", 256 },
 	{ "mincore", 27 },
 	{ "mkdir", 83 },
@@ -219,7 +229,6 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "munmap", 11 },
 	{ "name_to_handle_at", 303 },
 	{ "nanosleep", 35 },
-	{ "_newselect", __PNR__newselect },
 	{ "newfstatat", 262 },
 	{ "nfsservctl", 180 },
 	{ "nice", __PNR_nice },
@@ -228,6 +237,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "oldolduname", __PNR_oldolduname },
 	{ "oldstat", __PNR_oldstat },
 	{ "olduname", __PNR_olduname },
+	{ "oldwait4", __PNR_oldwait4 },
 	{ "open", 2 },
 	{ "open_by_handle_at", 304 },
 	{ "openat", 257 },
@@ -272,6 +282,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "removexattr", 197 },
 	{ "rename", 82 },
 	{ "renameat", 264 },
+	{ "renameat2", 316 },
 	{ "request_key", 249 },
 	{ "restart_syscall", 219 },
 	{ "rmdir", 84 },
@@ -286,13 +297,16 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "sched_get_priority_max", 146 },
 	{ "sched_get_priority_min", 147 },
 	{ "sched_getaffinity", 204 },
+	{ "sched_getattr", 315 },
 	{ "sched_getparam", 143 },
 	{ "sched_getscheduler", 145 },
 	{ "sched_rr_get_interval", 148 },
 	{ "sched_setaffinity", 203 },
+	{ "sched_setattr", 314 },
 	{ "sched_setparam", 142 },
 	{ "sched_setscheduler", 144 },
 	{ "sched_yield", 24 },
+	{ "seccomp", 317 },
 	{ "security", 185 },
 	{ "select", 23 },
 	{ "semctl", 66 },
@@ -309,6 +323,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "set_robust_list", 273 },
 	{ "set_thread_area", 205 },
 	{ "set_tid_address", 218 },
+	{ "set_tls", __PNR_set_tls },
 	{ "setdomainname", 171 },
 	{ "setfsgid", 123 },
 	{ "setfsgid32", __PNR_setfsgid32 },
@@ -373,10 +388,10 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "sync_file_range2", __PNR_sync_file_range2 },
 	{ "syncfs", 306 },
 	{ "syscall", __PNR_syscall },
-	{ "_sysctl", 156 },
 	{ "sysfs", 139 },
 	{ "sysinfo", 99 },
 	{ "syslog", 103 },
+	{ "sysmips", __PNR_sysmips },
 	{ "tee", 276 },
 	{ "tgkill", 234 },
 	{ "time", 201 },
@@ -385,6 +400,7 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "timer_getoverrun", 225 },
 	{ "timer_gettime", 224 },
 	{ "timer_settime", 223 },
+	{ "timerfd", __PNR_timerfd },
 	{ "timerfd_create", 283 },
 	{ "timerfd_gettime", 287 },
 	{ "timerfd_settime", 286 },
@@ -403,6 +419,8 @@ const struct arch_syscall_def x86_64_syscall_table[] = { \
 	{ "unlinkat", 263 },
 	{ "unshare", 272 },
 	{ "uselib", 134 },
+	{ "usr26", __PNR_usr26 },
+	{ "usr32", __PNR_usr32 },
 	{ "ustat", 136 },
 	{ "utime", 132 },
 	{ "utimensat", 280 },
@@ -466,3 +484,18 @@ const char *x86_64_syscall_resolve_num(int num)
 
 	return NULL;
 }
+
+/**
+ * Iterate through the syscall table and return the syscall name
+ * @param spot the offset into the syscall table
+ *
+ * Return the syscall name at position @spot or NULL on failure.  This function
+ * should only ever be used internally by libseccomp.
+ *
+ */
+const char *x86_64_syscall_iterate_name(unsigned int spot)
+{
+	/* XXX - no safety checks here */
+	return x86_64_syscall_table[spot].name;
+}
+

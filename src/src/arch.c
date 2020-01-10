@@ -34,7 +34,15 @@
 #include "arch-x86_64.h"
 #include "arch-x32.h"
 #include "arch-arm.h"
+#include "arch-aarch64.h"
+#include "arch-mips.h"
+#include "arch-mips64.h"
+#include "arch-mips64n32.h"
 #include "system.h"
+
+#define default_arg_count_max		6
+
+#define default_arg_offset(x)		(offsetof(struct seccomp_data, args[x]))
 
 #if __i386__
 const struct arch_def *arch_def_native = &arch_def_x86;
@@ -46,6 +54,26 @@ const struct arch_def *arch_def_native = &arch_def_x86_64;
 #endif /* __ILP32__ */
 #elif __arm__
 const struct arch_def *arch_def_native = &arch_def_arm;
+#elif __aarch64__
+const struct arch_def *arch_def_native = &arch_def_aarch64;
+#elif __mips__ && _MIPS_SIM == _MIPS_SIM_ABI32
+#if __MIPSEB__
+const struct arch_def *arch_def_native = &arch_def_mips;
+#elif __MIPSEL__
+const struct arch_def *arch_def_native = &arch_def_mipsel;
+#endif /* _MIPS_SIM_ABI32 */
+#elif __mips__ && _MIPS_SIM == _MIPS_SIM_ABI64
+#if __MIPSEB__
+const struct arch_def *arch_def_native = &arch_def_mips64;
+#elif __MIPSEL__
+const struct arch_def *arch_def_native = &arch_def_mipsel64;
+#endif /* _MIPS_SIM_ABI64 */
+#elif __mips__ && _MIPS_SIM == _MIPS_SIM_NABI32
+#if __MIPSEB__
+const struct arch_def *arch_def_native = &arch_def_mips64n32;
+#elif __MIPSEL__
+const struct arch_def *arch_def_native = &arch_def_mipsel64n32;
+#endif /* _MIPS_SIM_NABI32 */
 #else
 #error the arch code needs to know about your machine type
 #endif /* machine type guess */
@@ -59,15 +87,7 @@ const struct arch_def *arch_def_native = &arch_def_arm;
  */
 int arch_valid(uint32_t arch)
 {
-	switch (arch) {
-	case SCMP_ARCH_X86:
-	case SCMP_ARCH_X86_64:
-	case SCMP_ARCH_X32:
-	case SCMP_ARCH_ARM:
-		return 0;
-	}
-
-	return -EINVAL;
+	return (arch_def_lookup(arch) ? 0 : -EINVAL);
 }
 
 /**
@@ -88,7 +108,56 @@ const struct arch_def *arch_def_lookup(uint32_t token)
 		return &arch_def_x32;
 	case SCMP_ARCH_ARM:
 		return &arch_def_arm;
+	case SCMP_ARCH_AARCH64:
+		return &arch_def_aarch64;
+	case SCMP_ARCH_MIPS:
+		return &arch_def_mips;
+	case SCMP_ARCH_MIPSEL:
+		return &arch_def_mipsel;
+	case SCMP_ARCH_MIPS64:
+		return &arch_def_mips64;
+	case SCMP_ARCH_MIPSEL64:
+		return &arch_def_mipsel64;
+	case SCMP_ARCH_MIPS64N32:
+		return &arch_def_mips64n32;
+	case SCMP_ARCH_MIPSEL64N32:
+		return &arch_def_mipsel64n32;
 	}
+
+	return NULL;
+}
+
+/**
+ * Lookup the architecture definition by name
+ * @param arch_name the architecure name
+ *
+ * Return the matching architecture definition, returns NULL on failure.
+ *
+ */
+const struct arch_def *arch_def_lookup_name(const char *arch_name)
+{
+	if (strcmp(arch_name, "x86") == 0)
+		return &arch_def_x86;
+	else if (strcmp(arch_name, "x86_64") == 0)
+		return &arch_def_x86_64;
+	else if (strcmp(arch_name, "x32") == 0)
+		return &arch_def_x32;
+	else if (strcmp(arch_name, "arm") == 0)
+		return &arch_def_arm;
+	else if (strcmp(arch_name, "aarch64") == 0)
+		return &arch_def_aarch64;
+	else if (strcmp(arch_name, "mips") == 0)
+		return &arch_def_mips;
+	else if (strcmp(arch_name, "mipsel") == 0)
+		return &arch_def_mipsel;
+	else if (strcmp(arch_name, "mips64") == 0)
+		return &arch_def_mips64;
+	else if (strcmp(arch_name, "mipsel64") == 0)
+		return &arch_def_mipsel64;
+	else if (strcmp(arch_name, "mips64n32") == 0)
+		return &arch_def_mips64n32;
+	else if (strcmp(arch_name, "mipsel64n32") == 0)
+		return &arch_def_mipsel64n32;
 
 	return NULL;
 }
@@ -103,18 +172,7 @@ const struct arch_def *arch_def_lookup(uint32_t token)
  */
 int arch_arg_count_max(const struct arch_def *arch)
 {
-	switch (arch->token) {
-	case SCMP_ARCH_X86:
-		return x86_arg_count_max;
-	case SCMP_ARCH_X86_64:
-		return x86_64_arg_count_max;
-	case SCMP_ARCH_X32:
-		return x32_arg_count_max;
-	case SCMP_ARCH_ARM:
-		return arm_arg_count_max;
-	}
-
-	return -EDOM;
+	return (arch_valid(arch->token) == 0 ? default_arg_count_max : -EDOM);
 }
 
 /**
@@ -129,9 +187,16 @@ int arch_arg_count_max(const struct arch_def *arch)
  */
 int arch_arg_offset_lo(const struct arch_def *arch, unsigned int arg)
 {
-	switch (arch->token) {
-	case SCMP_ARCH_X86_64:
-		return x86_64_arg_offset_lo(arg);
+	if (arch_valid(arch->token) < 0)
+		return -EDOM;
+
+	switch (arch->endian) {
+	case ARCH_ENDIAN_LITTLE:
+		return default_arg_offset(arg);
+		break;
+	case ARCH_ENDIAN_BIG:
+		return default_arg_offset(arg) + 4;
+		break;
 	default:
 		return -EDOM;
 	}
@@ -149,12 +214,34 @@ int arch_arg_offset_lo(const struct arch_def *arch, unsigned int arg)
  */
 int arch_arg_offset_hi(const struct arch_def *arch, unsigned int arg)
 {
-	switch (arch->token) {
-	case SCMP_ARCH_X86_64:
-		return x86_64_arg_offset_hi(arg);
+	if (arch_valid(arch->token) < 0 || arch->size != ARCH_SIZE_64)
+		return -EDOM;
+
+	switch (arch->endian) {
+	case ARCH_ENDIAN_LITTLE:
+		return default_arg_offset(arg) + 4;
+		break;
+	case ARCH_ENDIAN_BIG:
+		return default_arg_offset(arg);
+		break;
 	default:
 		return -EDOM;
 	}
+}
+
+/**
+ * Determine the argument offset
+ * @param arch the architecture definition
+ * @param arg the argument number
+ *
+ * Determine the correct offset for the given argument based on the
+ * architecture definition.  Returns the offset on success, negative values on
+ * failure.
+ *
+ */
+int arch_arg_offset(const struct arch_def *arch, unsigned int arg)
+{
+	return arch_arg_offset_lo(arch, arg);
 }
 
 /**
@@ -178,6 +265,17 @@ int arch_syscall_resolve_name(const struct arch_def *arch, const char *name)
 		return x32_syscall_resolve_name(name);
 	case SCMP_ARCH_ARM:
 		return arm_syscall_resolve_name(name);
+	case SCMP_ARCH_AARCH64:
+		return aarch64_syscall_resolve_name(name);
+	case SCMP_ARCH_MIPS:
+	case SCMP_ARCH_MIPSEL:
+		return mips_syscall_resolve_name(name);
+	case SCMP_ARCH_MIPS64:
+	case SCMP_ARCH_MIPSEL64:
+		return mips64_syscall_resolve_name(name);
+	case SCMP_ARCH_MIPS64N32:
+	case SCMP_ARCH_MIPSEL64N32:
+		return mips64n32_syscall_resolve_name(name);
 	}
 
 	return __NR_SCMP_ERROR;
@@ -204,6 +302,17 @@ const char *arch_syscall_resolve_num(const struct arch_def *arch, int num)
 		return x32_syscall_resolve_num(num);
 	case SCMP_ARCH_ARM:
 		return arm_syscall_resolve_num(num);
+	case SCMP_ARCH_AARCH64:
+		return aarch64_syscall_resolve_num(num);
+	case SCMP_ARCH_MIPS:
+	case SCMP_ARCH_MIPSEL:
+		return mips_syscall_resolve_num(num);
+	case SCMP_ARCH_MIPS64:
+	case SCMP_ARCH_MIPSEL64:
+		return mips64_syscall_resolve_num(num);
+	case SCMP_ARCH_MIPS64N32:
+	case SCMP_ARCH_MIPSEL64N32:
+		return mips64n32_syscall_resolve_num(num);
 	}
 
 	return NULL;

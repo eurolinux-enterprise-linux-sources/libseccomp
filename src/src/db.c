@@ -72,10 +72,9 @@ static unsigned int __db_tree_free(struct db_arg_chain_tree *tree)
 
 /**
  * Free a syscall filter argument chain tree
- * @param list the argument chain list
+ * @param tree the argument chain list
  *
- * This function frees a syscall argument chain list and returns the number of
- * nodes freed.
+ * This function frees a tree and returns the number of nodes freed.
  *
  */
 static unsigned int _db_tree_free(struct db_arg_chain_tree *tree)
@@ -389,13 +388,18 @@ void db_col_reset(struct db_filter_col *col, uint32_t def_action)
 	for (iter = 0; iter < col->filter_cnt; iter++)
 		db_release(col->filters[iter]);
 	col->filter_cnt = 0;
-	free(col->filters);
+	if (col->filters)
+		free(col->filters);
 	col->filters = NULL;
+
+	/* set the endianess to undefined */
+	col->endian = 0;
 
 	/* set the default attribute values */
 	col->attr.act_default = def_action;
 	col->attr.act_badarch = SCMP_ACT_KILL;
 	col->attr.nnp_enable = 1;
+	col->attr.tsync_enable = 0;
 
 	/* set the state */
 	col->state = _DB_STA_VALID;
@@ -457,7 +461,7 @@ void db_col_release(struct db_filter_col *col)
  */
 int db_col_valid(struct db_filter_col *col)
 {
-	if (col != NULL && col->state == _DB_STA_VALID)
+	if (col != NULL && col->state == _DB_STA_VALID && col->filter_cnt > 0)
 		return 0;
 	return -EINVAL;
 }
@@ -476,6 +480,10 @@ int db_col_merge(struct db_filter_col *col_dst, struct db_filter_col *col_src)
 {
 	unsigned int iter_a, iter_b;
 	struct db_filter **dbs;
+
+	/* verify that the endianess is a match */
+	if (col_dst->endian != col_src->endian)
+		return -EEXIST;
 
 	/* make sure we don't have any arch/filter collisions */
 	for (iter_a = 0; iter_a < col_dst->filter_cnt; iter_a++) {
@@ -554,6 +562,9 @@ int db_col_attr_get(const struct db_filter_col *col,
 	case SCMP_FLTATR_CTL_NNP:
 		*value = col->attr.nnp_enable;
 		break;
+	case SCMP_FLTATR_CTL_TSYNC:
+		*value = col->attr.tsync_enable;
+		break;
 	default:
 		rc = -EEXIST;
 		break;
@@ -564,7 +575,7 @@ int db_col_attr_get(const struct db_filter_col *col,
 
 /**
  * Set a filter attribute
- * @param db the seccomp filter collection
+ * @param col the seccomp filter collection
  * @param attr the filter attribute
  * @param value the filter attribute value
  *
@@ -591,6 +602,12 @@ int db_col_attr_set(struct db_filter_col *col,
 	case SCMP_FLTATR_CTL_NNP:
 		col->attr.nnp_enable = (value ? 1 : 0);
 		break;
+	case SCMP_FLTATR_CTL_TSYNC:
+		rc = sys_chk_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC);
+		if (rc)
+			return rc;
+		col->attr.tsync_enable = (value ? 1 : 0);
+		break;
 	default:
 		rc = -EEXIST;
 		break;
@@ -613,6 +630,9 @@ int db_col_db_add(struct db_filter_col *col, struct db_filter *db)
 {
 	struct db_filter **dbs;
 
+	if (col->endian != 0 && col->endian != db->arch->endian)
+		return -EEXIST;
+
 	if (db_col_arch_exist(col, db->arch->token))
 		return -EEXIST;
 
@@ -623,6 +643,8 @@ int db_col_db_add(struct db_filter_col *col, struct db_filter *db)
 	col->filters = dbs;
 	col->filter_cnt++;
 	col->filters[col->filter_cnt - 1] = db;
+	if (col->endian == 0)
+		col->endian = db->arch->endian;
 
 	return 0;
 }
@@ -642,7 +664,7 @@ int db_col_db_remove(struct db_filter_col *col, uint32_t arch_token)
 	unsigned int found;
 	struct db_filter **dbs;
 
-	if ((col->filter_cnt <= 1) || (db_col_arch_exist(col, arch_token) == 0))
+	if ((col->filter_cnt <= 0) || (db_col_arch_exist(col, arch_token) == 0))
 		return -EINVAL;
 
 	for (found = 0, iter = 0; iter < col->filter_cnt; iter++) {
@@ -655,12 +677,20 @@ int db_col_db_remove(struct db_filter_col *col, uint32_t arch_token)
 	}
 	col->filters[--col->filter_cnt] = NULL;
 
-	/* NOTE: if we can't do the realloc it isn't fatal, we just have some
-	 *       extra space that will get cleaned up later */
-	dbs = realloc(col->filters,
-		      sizeof(struct db_filter *) * col->filter_cnt);
-	if (dbs != NULL)
-		col->filters = dbs;
+	if (col->filter_cnt > 0) {
+		/* NOTE: if we can't do the realloc it isn't fatal, we just
+		 *       have some extra space allocated */
+		dbs = realloc(col->filters,
+			      sizeof(struct db_filter *) * col->filter_cnt);
+		if (dbs != NULL)
+			col->filters = dbs;
+	} else {
+		/* this was the last filter so free all the associated memory
+		 * and reset the endian token */
+		free(col->filters);
+		col->filters = NULL;
+		col->endian = 0;
+	}
 
 	return 0;
 }
@@ -668,7 +698,6 @@ int db_col_db_remove(struct db_filter_col *col, uint32_t arch_token)
 /**
  * Free and reset the seccomp filter DB
  * @param db the seccomp filter DB
- * @param def_action the default filter action
  *
  * This function frees any existing filters and resets the filter DB to a
  * default state; only the DB architecture is preserved.
@@ -843,6 +872,8 @@ static struct db_sys_list *_db_rule_gen_64(const struct arch_def *arch,
 	s_new->valid = true;
 	/* run through the argument chain */
 	chain_len_max = arch_arg_count_max(arch);
+	if (chain_len_max < 0)
+		goto gen_64_failure;
 	for (iter = 0; iter < chain_len_max; iter++) {
 		if (chain[iter].valid == 0)
 			continue;
@@ -973,6 +1004,8 @@ static struct db_sys_list *_db_rule_gen_32(const struct arch_def *arch,
 	s_new->valid = true;
 	/* run through the argument chain */
 	chain_len_max = arch_arg_count_max(arch);
+	if (chain_len_max < 0)
+		goto gen_32_failure;
 	for (iter = 0; iter < chain_len_max; iter++) {
 		if (chain[iter].valid == 0)
 			continue;
@@ -983,7 +1016,7 @@ static struct db_sys_list *_db_rule_gen_32(const struct arch_def *arch,
 		memset(c_iter, 0, sizeof(*c_iter));
 		c_iter->refcnt = 1;
 		c_iter->arg = chain[iter].arg;
-		c_iter->arg_offset = arch_arg_offset(c_iter->arg);
+		c_iter->arg_offset = arch_arg_offset(arch, c_iter->arg);
 		c_iter->op = chain[iter].op;
 		c_iter->mask = chain[iter].mask;
 		c_iter->datum = chain[iter].datum;

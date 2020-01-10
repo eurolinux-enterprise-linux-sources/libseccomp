@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 
 #include "bpf.h"
+#include "util.h"
 
 #define BPF_PRG_MAX_LEN		4096
 
@@ -49,22 +50,6 @@ struct bpf_program {
 };
 
 static unsigned int opt_verbose = 0;
-
-/**
- * Print the usage information to stderr and exit
- * @param program the name of the current program being invoked
- *
- * Print the usage information and exit with EINVAL.
- *
- */
-static void exit_usage(const char *program)
-{
-	fprintf(stderr,
-		"usage: %s -f <bpf_file> [-v]"
-		" -a <arch> -s <syscall_num> [-0 <a0>] ... [-5 <a5>]\n",
-		program);
-	exit(EINVAL);
-}
 
 /**
  * Handle a simulator fault
@@ -152,6 +137,10 @@ static void bpf_execute(const struct bpf_program *prg,
 	struct sim_state state;
 	bpf_instr_raw *bpf;
 	unsigned char *sys_data_b = (unsigned char *)sys_data;
+	uint16_t code;
+	uint8_t jt;
+	uint8_t jf;
+	uint32_t k;
 
 	/* initialize the machine state */
 	ip_c = 0;
@@ -163,42 +152,48 @@ static void bpf_execute(const struct bpf_program *prg,
 		ip_c = ip;
 		bpf = &prg->i[ip++];
 
-		switch (bpf->code) {
+		code = ttoh16(arch, bpf->code);
+		jt = bpf->jt;
+		jf = bpf->jf;
+		k = ttoh32(arch, bpf->k);
+
+		switch (code) {
 		case BPF_LD+BPF_W+BPF_ABS:
-			if (bpf->k < BPF_SYSCALL_MAX)
-				state.acc = *((uint32_t *)&sys_data_b[bpf->k]);
-			else
+			if (k < BPF_SYSCALL_MAX) {
+				uint32_t val = *((uint32_t *)&sys_data_b[k]);
+				state.acc = ttoh32(arch, val);
+			} else
 				exit_error(ERANGE, ip_c);
 			break;
 		case BPF_ALU+BPF_OR+BPF_K:
-			state.acc |= bpf->k;
+			state.acc |= k;
 			break;
 		case BPF_ALU+BPF_AND+BPF_K:
-			state.acc &= bpf->k;
+			state.acc &= k;
 			break;
 		case BPF_JMP+BPF_JA:
-			ip += bpf->k;
+			ip += k;
 			break;
 		case BPF_JMP+BPF_JEQ+BPF_K:
-			if (state.acc == bpf->k)
-				ip += bpf->jt;
+			if (state.acc == k)
+				ip += jt;
 			else
-				ip += bpf->jf;
+				ip += jf;
 			break;
 		case BPF_JMP+BPF_JGT+BPF_K:
-			if (state.acc > bpf->k)
-				ip += bpf->jt;
+			if (state.acc > k)
+				ip += jt;
 			else
-				ip += bpf->jf;
+				ip += jf;
 			break;
 		case BPF_JMP+BPF_JGE+BPF_K:
-			if (state.acc >= bpf->k)
-				ip += bpf->jt;
+			if (state.acc >= k)
+				ip += jt;
 			else
-				ip += bpf->jf;
+				ip += jf;
 			break;
 		case BPF_RET+BPF_K:
-			end_action(bpf->k, ip_c);
+			end_action(k, ip_c);
 			break;
 		default:
 			/* since we don't support the full bpf language just
@@ -218,13 +213,14 @@ static void bpf_execute(const struct bpf_program *prg,
 int main(int argc, char *argv[])
 {
 	int opt;
+	int iter;
 	char *opt_file = NULL;
 	FILE *file;
 	size_t file_read_len;
 	struct seccomp_data sys_data;
 	struct bpf_program bpf_prg;
 
-	/* clear the syscall record */
+	/* initialize the syscall record */
 	memset(&sys_data, 0, sizeof(sys_data));
 
 	/* parse the command line */
@@ -232,13 +228,27 @@ int main(int argc, char *argv[])
 		switch (opt) {
 		case 'a':
 			if (strcmp(optarg, "x86") == 0)
-				sys_data.arch = AUDIT_ARCH_I386;
+				arch = AUDIT_ARCH_I386;
 			else if (strcmp(optarg, "x86_64") == 0)
-				sys_data.arch = AUDIT_ARCH_X86_64;
+				arch = AUDIT_ARCH_X86_64;
 			else if (strcmp(optarg, "x32") == 0)
-				sys_data.arch = AUDIT_ARCH_X86_64;
+				arch = AUDIT_ARCH_X86_64;
 			else if (strcmp(optarg, "arm") == 0)
-				sys_data.arch = AUDIT_ARCH_ARM;
+				arch = AUDIT_ARCH_ARM;
+			else if (strcmp(optarg, "aarch64") == 0)
+				arch = AUDIT_ARCH_AARCH64;
+			else if (strcmp(optarg, "mips") == 0)
+				arch = AUDIT_ARCH_MIPS;
+			else if (strcmp(optarg, "mipsel") == 0)
+				arch = AUDIT_ARCH_MIPSEL;
+			else if (strcmp(optarg, "mips64") == 0)
+				arch = AUDIT_ARCH_MIPS64;
+			else if (strcmp(optarg, "mipsel64") == 0)
+				arch = AUDIT_ARCH_MIPSEL64;
+			else if (strcmp(optarg, "mips64n32") == 0)
+				arch = AUDIT_ARCH_MIPS64N32;
+			else if (strcmp(optarg, "mipsel64n32") == 0)
+				arch = AUDIT_ARCH_MIPSEL64N32;
 			else
 				exit_fault(EINVAL);
 			break;
@@ -277,6 +287,14 @@ int main(int argc, char *argv[])
 			exit_usage(argv[0]);
 		}
 	}
+
+	/* adjust the endianess of sys_data to match the target */
+	sys_data.nr = htot32(arch, sys_data.nr);
+	sys_data.arch = htot32(arch, arch);
+	sys_data.instruction_pointer = htot64(arch,
+					      sys_data.instruction_pointer);
+	for (iter = 0; iter < BPF_SYS_ARG_MAX; iter++)
+		sys_data.args[iter] = htot64(arch, sys_data.args[iter]);
 
 	/* allocate space for the bpf program */
 	/* XXX - we should make this dynamic */

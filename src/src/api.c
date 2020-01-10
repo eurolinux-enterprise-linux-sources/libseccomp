@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <sys/prctl.h>
 
 #include <seccomp.h>
 
@@ -102,7 +101,7 @@ API int seccomp_reset(scmp_filter_ctx ctx, uint32_t def_action)
 	struct db_filter_col *col = (struct db_filter_col *)ctx;
 	struct db_filter *db;
 
-	if (db_col_valid(col) || db_action_valid(def_action) < 0)
+	if (ctx == NULL || db_action_valid(def_action) < 0)
 		return -EINVAL;
 
 	db_col_reset(col, def_action);
@@ -120,9 +119,6 @@ API int seccomp_reset(scmp_filter_ctx ctx, uint32_t def_action)
 /* NOTE - function header comment in include/seccomp.h */
 API void seccomp_release(scmp_filter_ctx ctx)
 {
-	if (_ctx_valid(ctx))
-		return;
-
 	db_col_release((struct db_filter_col *)ctx);
 }
 
@@ -136,12 +132,28 @@ API int seccomp_merge(scmp_filter_ctx ctx_dst,
 	if (db_col_valid(col_dst) || db_col_valid(col_src))
 		return -EINVAL;
 
-	/* NOTE: only the default action and NNP settings must match */
+	/* NOTE: only the default action, NNP, and TSYNC settings must match */
 	if ((col_dst->attr.act_default != col_src->attr.act_default) ||
-	    (col_dst->attr.nnp_enable != col_src->attr.nnp_enable))
+	    (col_dst->attr.nnp_enable != col_src->attr.nnp_enable) ||
+	    (col_dst->attr.tsync_enable != col_src->attr.tsync_enable))
 		return -EINVAL;
 
 	return db_col_merge(col_dst, col_src);
+}
+
+/* NOTE - function header comment in include/seccomp.h */
+API uint32_t seccomp_arch_resolve_name(const char *arch_name)
+{
+	const struct arch_def *arch;
+
+	if (arch_name == NULL)
+		return 0;
+
+	arch = arch_def_lookup_name(arch_name);
+	if (arch == NULL)
+		return 0;
+
+	return arch->token;
 }
 
 /* NOTE - function header comment in include/seccomp.h */
@@ -213,30 +225,13 @@ API int seccomp_arch_remove(scmp_filter_ctx ctx, uint32_t arch_token)
 /* NOTE - function header comment in include/seccomp.h */
 API int seccomp_load(const scmp_filter_ctx ctx)
 {
-	int rc;
 	struct db_filter_col *col;
-	struct bpf_program *program;
 
 	if (_ctx_valid(ctx))
 		return -EINVAL;
 	col = (struct db_filter_col *)ctx;
 
-	program = gen_bpf_generate((struct db_filter_col *)ctx);
-	if (program == NULL)
-		return -ENOMEM;
-	/* attempt to set NO_NEW_PRIVS */
-	if (col->attr.nnp_enable) {
-		rc = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-		if (rc < 0)
-			return -errno;
-	}
-	/* load the filter into the kernel */
-	rc = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, program);
-	gen_bpf_release(program);
-	if (rc < 0)
-		return -errno;
-
-	return 0;
+	return sys_filter_load(col);
 }
 
 /* NOTE - function header comment in include/seccomp.h */
@@ -286,17 +281,44 @@ API int seccomp_syscall_resolve_name_arch(uint32_t arch_token, const char *name)
 	const struct arch_def *arch;
 
 	if (name == NULL)
-		return -EINVAL;
+		return __NR_SCMP_ERROR;
 
 	if (arch_token == 0)
 		arch_token = arch_def_native->token;
 	if (arch_valid(arch_token))
-		return -EINVAL;
+		return __NR_SCMP_ERROR;
 	arch = arch_def_lookup(arch_token);
 	if (arch == NULL)
-		return -EFAULT;
+		return __NR_SCMP_ERROR;
 
 	return arch_syscall_resolve_name(arch, name);
+}
+
+/* NOTE - function header comment in include/seccomp.h */
+API int seccomp_syscall_resolve_name_rewrite(uint32_t arch_token,
+					     const char *name)
+{
+	int syscall;
+	const struct arch_def *arch;
+
+	if (name == NULL)
+		return __NR_SCMP_ERROR;
+
+	if (arch_token == 0)
+		arch_token = arch_def_native->token;
+	if (arch_valid(arch_token))
+		return __NR_SCMP_ERROR;
+	arch = arch_def_lookup(arch_token);
+	if (arch == NULL)
+		return __NR_SCMP_ERROR;
+
+	syscall = arch_syscall_resolve_name(arch, name);
+	if (syscall == __NR_SCMP_ERROR)
+		return __NR_SCMP_ERROR;
+	if (arch_syscall_rewrite(arch, 0, &syscall) < 0)
+		return __NR_SCMP_ERROR;
+
+	return syscall;
 }
 
 /* NOTE - function header comment in include/seccomp.h */
@@ -358,7 +380,7 @@ syscall_priority_failure:
  * @param action the filter action
  * @param syscall the syscall number
  * @param arg_cnt the number of argument filters in the argument filter chain
- * @param arg_list the argument filter chain, (uint, enum scmp_compare, ulong)
+ * @param arg_array the argument filter chain, (uint, enum scmp_compare, ulong)
  *
  * This function adds a new argument/comparison/value to the seccomp filter for
  * a syscall; multiple arguments can be specified and they will be chained
@@ -494,7 +516,8 @@ API int seccomp_rule_add_array(scmp_filter_ctx ctx,
 			       unsigned int arg_cnt,
 			       const struct scmp_arg_cmp *arg_array)
 {
-	if (arg_cnt < 0 || arg_cnt > ARG_COUNT_MAX)
+	/* arg_cnt is unsigned, so no need to check the lower bound */
+	if (arg_cnt > ARG_COUNT_MAX)
 		return -EINVAL;
 
 	return _seccomp_rule_add((struct db_filter_col *)ctx,
@@ -511,7 +534,8 @@ API int seccomp_rule_add(scmp_filter_ctx ctx,
 	struct scmp_arg_cmp arg_array[ARG_COUNT_MAX];
 	va_list arg_list;
 
-	if (arg_cnt < 0 || arg_cnt > ARG_COUNT_MAX)
+	/* arg_cnt is unsigned, so no need to check the lower bound */
+	if (arg_cnt > ARG_COUNT_MAX)
 		return -EINVAL;
 
 	va_start(arg_list, arg_cnt);
@@ -529,7 +553,8 @@ API int seccomp_rule_add_exact_array(scmp_filter_ctx ctx,
 				     unsigned int arg_cnt,
 				     const struct scmp_arg_cmp *arg_array)
 {
-	if (arg_cnt < 0 || arg_cnt > ARG_COUNT_MAX)
+	/* arg_cnt is unsigned, so no need to check the lower bound */
+	if (arg_cnt > ARG_COUNT_MAX)
 		return -EINVAL;
 
 	return _seccomp_rule_add((struct db_filter_col *)ctx,
@@ -546,7 +571,8 @@ API int seccomp_rule_add_exact(scmp_filter_ctx ctx,
 	struct scmp_arg_cmp arg_array[ARG_COUNT_MAX];
 	va_list arg_list;
 
-	if (arg_cnt < 0 || arg_cnt > ARG_COUNT_MAX)
+	/* arg_cnt is unsigned, so no need to check the lower bound */
+	if (arg_cnt > ARG_COUNT_MAX)
 		return -EINVAL;
 
 	va_start(arg_list, arg_cnt);

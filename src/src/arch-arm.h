@@ -27,11 +27,11 @@
 #include "arch.h"
 #include "system.h"
 
-#define arm_arg_count_max		6
-
 extern const struct arch_def arch_def_arm;
 
 int arm_syscall_resolve_name(const char *name);
 const char *arm_syscall_resolve_num(int num);
+
+const char *arm_syscall_iterate_name(unsigned int spot);
 
 #endif

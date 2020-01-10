@@ -19,8 +19,8 @@
  * along with this library; if not, see <http://www.gnu.org/licenses>.
  */
 
-#include <unistd.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <seccomp.h>
 
@@ -30,35 +30,36 @@ int main(int argc, char *argv[])
 {
 	int rc;
 	struct util_options opts;
-	scmp_filter_ctx ctx_64, ctx_32;
+	scmp_filter_ctx ctx_64 = NULL, ctx_32 = NULL;
 
 	rc = util_getopt(argc, argv, &opts);
 	if (rc < 0)
 		goto out_all;
 
 	ctx_32 = seccomp_init(SCMP_ACT_KILL);
-	if (ctx_32 == NULL)
+	if (ctx_32 == NULL) {
+		rc = -ENOMEM;
 		goto out_all;
+	}
 	ctx_64 = seccomp_init(SCMP_ACT_KILL);
-	if (ctx_64 == NULL)
+	if (ctx_64 == NULL) {
+		rc = -ENOMEM;
 		goto out_all;
+	}
 
-	if (seccomp_arch_exist(ctx_32, SCMP_ARCH_X86) == -EEXIST) {
-		rc = seccomp_arch_add(ctx_32, SCMP_ARCH_X86);
-		if (rc != 0)
-			goto out_all;
-		rc = seccomp_arch_remove(ctx_32, SCMP_ARCH_NATIVE);
-		if (rc != 0)
-			goto out_all;
-	}
-	if (seccomp_arch_exist(ctx_64, SCMP_ARCH_X86_64) == -EEXIST) {
-		rc = seccomp_arch_add(ctx_64, SCMP_ARCH_X86_64);
-		if (rc != 0)
-			goto out_all;
-		rc = seccomp_arch_remove(ctx_64, SCMP_ARCH_NATIVE);
-		if (rc != 0)
-			goto out_all;
-	}
+	rc = seccomp_arch_remove(ctx_32, SCMP_ARCH_NATIVE);
+	if (rc != 0)
+		goto out;
+	rc = seccomp_arch_remove(ctx_64, SCMP_ARCH_NATIVE);
+	if (rc != 0)
+		goto out;
+
+	rc = seccomp_arch_add(ctx_32, SCMP_ARCH_X86);
+	if (rc != 0)
+		goto out_all;
+	rc = seccomp_arch_add(ctx_64, SCMP_ARCH_X86_64);
+	if (rc != 0)
+		goto out_all;
 
 	rc = seccomp_rule_add(ctx_32, SCMP_ACT_ALLOW, SCMP_SYS(read), 1,
 			      SCMP_A0(SCMP_CMP_EQ, STDIN_FILENO));

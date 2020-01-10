@@ -30,11 +30,11 @@ int main(int argc, char *argv[])
 {
 	int rc;
 	uint32_t val = (uint32_t)(-1);
-	scmp_filter_ctx ctx;
+	scmp_filter_ctx ctx = NULL;
 
 	ctx = seccomp_init(SCMP_ACT_ALLOW);
 	if (ctx == NULL)
-		goto out;
+		return ENOMEM;
 
 	rc = seccomp_attr_get(ctx, SCMP_FLTATR_ACT_DEFAULT, &val);
 	if (rc != 0)

@@ -1,19 +1,13 @@
 Summary: Enhanced seccomp library
 Name: libseccomp
-Version: 2.1.1
-Release: 2%{?dist}
-ExclusiveArch: %{ix86} x86_64 %{arm}
+Version: 2.2.1
+Release: 1%{?dist}
+ExclusiveArch: %{ix86} x86_64 %{arm} aarch64
 License: LGPLv2
 Group: System Environment/Libraries
-Source: http://downloads.sf.net/project/libseccomp/%{name}-%{version}.tar.gz
-URL: http://libseccomp.sourceforge.net
+Source: https://github.com/seccomp/libseccomp/releases/download/v%{version}/%{name}-%{version}.tar.gz
+URL: https://github.com/seccomp/libseccomp
 BuildRequires: valgrind
-%ifarch %{ix86} x86_64
-Requires: kernel >= 3.5
-%endif
-%ifarch %{arm}
-Requires: kernel >= 3.8
-%endif
 
 %description
 The libseccomp library provides an easy to use interface to the Linux Kernel's
@@ -38,8 +32,8 @@ Kernel.
 %setup -q
 
 %build
-./configure --prefix="%{_prefix}" --libdir="%{_libdir}"
-CFLAGS="%{optflags}" make V=1 %{?_smp_mflags}
+%configure
+make V=1 %{?_smp_mflags}
 
 %install
 rm -rf "%{buildroot}"
@@ -47,18 +41,23 @@ mkdir -p "%{buildroot}/%{_libdir}"
 mkdir -p "%{buildroot}/%{_includedir}"
 mkdir -p "%{buildroot}/%{_mandir}"
 make V=1 DESTDIR="%{buildroot}" install
+rm -f "%{buildroot}/%{_libdir}/libseccomp.la"
+rm -f "%{buildroot}/%{_libdir}/libseccomp.a"
 
 %check
-make check
+make V=1 check
 
 %post -p /sbin/ldconfig
 
 %postun -p /sbin/ldconfig
 
 %files
-%doc LICENSE
+%{!?_licensedir:%global license %%doc}
+%license LICENSE
 %doc CREDITS
 %doc README
+%doc CHANGELOG
+%doc SUBMITTING_PATCHES
 %{_libdir}/libseccomp.so.*
 
 %files devel
@@ -70,6 +69,15 @@ make check
 %{_mandir}/man3/*
 
 %changelog
+* Mon Jun 15 2015 Paul Moore <pmoore@redhat.com> - 2.2.1-1
+- Removed '--disable-static' from the build to ensure that scmp_sys_resolver
+  is self contained and resolve RPATH issues
+
+* Wed May 13 2015 Paul Moore <pmoore@redhat.com> - 2.2.1-0
+- New upstream version
+- Added aarch64 support
+- Move to an autotools based build system
+
 * Thu Feb 27 2014 Paul Moore <pmoore@redhat.com> - 2.1.1-2
 - Build with CFLAGS="${optflags}" (RHBZ #1070774)
 * Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 2.1.1-1

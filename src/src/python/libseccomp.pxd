@@ -31,6 +31,13 @@ cdef extern from "seccomp.h":
         SCMP_ARCH_X86_64
         SCMP_ARCH_X32
         SCMP_ARCH_ARM
+        SCMP_ARCH_AARCH64
+        SCMP_ARCH_MIPS
+        SCMP_ARCH_MIPS64
+        SCMP_ARCH_MIPS64N32
+        SCMP_ARCH_MIPSEL
+        SCMP_ARCH_MIPSEL64
+        SCMP_ARCH_MIPSEL64N32
 
     cdef enum scmp_filter_attr:
         SCMP_FLTATR_ACT_DEFAULT
@@ -67,10 +74,11 @@ cdef extern from "seccomp.h":
 
     int seccomp_merge(scmp_filter_ctx ctx_dst, scmp_filter_ctx ctx_src)
 
+    uint32_t seccomp_arch_resolve_name(char *arch_name)
     uint32_t seccomp_arch_native()
-    int seccomp_arch_exist(scmp_filter_ctx ctx, uint32_t arch_token)
-    int seccomp_arch_add(scmp_filter_ctx ctx, uint32_t arch_token)
-    int seccomp_arch_remove(scmp_filter_ctx ctx, uint32_t arch_token)
+    int seccomp_arch_exist(scmp_filter_ctx ctx, int arch_token)
+    int seccomp_arch_add(scmp_filter_ctx ctx, int arch_token)
+    int seccomp_arch_remove(scmp_filter_ctx ctx, int arch_token)
 
     int seccomp_load(scmp_filter_ctx ctx)
 
@@ -79,8 +87,9 @@ cdef extern from "seccomp.h":
     int seccomp_attr_set(scmp_filter_ctx ctx,
                          scmp_filter_attr attr, uint32_t value)
 
-    char *seccomp_syscall_resolve_num_arch(uint32_t arch_token, int num)
-    int seccomp_syscall_resolve_name_arch(uint32_t arch_token, char *name)
+    char *seccomp_syscall_resolve_num_arch(int arch_token, int num)
+    int seccomp_syscall_resolve_name_arch(int arch_token, char *name)
+    int seccomp_syscall_resolve_name_rewrite(int arch_token, char *name)
     int seccomp_syscall_resolve_name(char *name)
     int seccomp_syscall_priority(scmp_filter_ctx ctx,
                                  int syscall, uint8_t priority)
