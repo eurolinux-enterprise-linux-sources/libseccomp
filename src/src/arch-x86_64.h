@@ -2,7 +2,7 @@
  * Enhanced Seccomp x86_64 Specific Code
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <paul@paul-moore.com>
+ * Author: Paul Moore <pmoore@redhat.com>
  */
 
 /*
@@ -27,11 +27,14 @@
 #include "arch.h"
 #include "system.h"
 
+#define x86_64_arg_count_max		6
+
 extern const struct arch_def arch_def_x86_64;
+
+#define x86_64_arg_offset_lo(x)		(arch_arg_offset(x))
+#define x86_64_arg_offset_hi(x)		(arch_arg_offset(x) + 4)
 
 int x86_64_syscall_resolve_name(const char *name);
 const char *x86_64_syscall_resolve_num(int num);
-
-const char *x86_64_syscall_iterate_name(unsigned int spot);
 
 #endif

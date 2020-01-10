@@ -1,14 +1,18 @@
 Summary: Enhanced seccomp library
 Name: libseccomp
-Version: 2.3.1
-Release: 2%{?dist}
-ExclusiveArch: %{ix86} x86_64 %{arm} aarch64 ppc64 ppc64le s390 s390x
+Version: 2.1.1
+Release: 0%{?dist}
+ExclusiveArch: %{ix86} x86_64 %{arm}
 License: LGPLv2
 Group: System Environment/Libraries
-Source: https://github.com/seccomp/libseccomp/releases/download/v%{version}/%{name}-%{version}.tar.gz
-URL: https://github.com/seccomp/libseccomp
-%ifnarch s390
+Source: http://downloads.sf.net/project/libseccomp/%{name}-%{version}.tar.gz
+URL: http://libseccomp.sourceforge.net
 BuildRequires: valgrind
+%ifarch %{ix86} x86_64
+Requires: kernel >= 3.5
+%endif
+%ifarch %{arm}
+Requires: kernel >= 3.8
 %endif
 
 %description
@@ -34,7 +38,7 @@ Kernel.
 %setup -q
 
 %build
-%configure
+./configure --prefix="%{_prefix}" --libdir="%{_libdir}"
 make V=1 %{?_smp_mflags}
 
 %install
@@ -43,23 +47,18 @@ mkdir -p "%{buildroot}/%{_libdir}"
 mkdir -p "%{buildroot}/%{_includedir}"
 mkdir -p "%{buildroot}/%{_mandir}"
 make V=1 DESTDIR="%{buildroot}" install
-rm -f "%{buildroot}/%{_libdir}/libseccomp.la"
-rm -f "%{buildroot}/%{_libdir}/libseccomp.a"
 
 %check
-make V=1 check
+make check
 
 %post -p /sbin/ldconfig
 
 %postun -p /sbin/ldconfig
 
 %files
-%{!?_licensedir:%global license %%doc}
-%license LICENSE
+%doc LICENSE
 %doc CREDITS
 %doc README
-%doc CHANGELOG
-%doc SUBMITTING_PATCHES
 %{_libdir}/libseccomp.so.*
 
 %files devel
@@ -71,32 +70,9 @@ make V=1 check
 %{_mandir}/man3/*
 
 %changelog
-* Thu Apr 28 2016 Paul Moore <pmoore@redhat.com> - 2.3.1-2
-- Fix a typo with the ppc64le architecture
-
-* Thu Apr 21 2016 Paul Moore <pmoore@redhat.com> - 2.3.1-1
-- Escape the macros in the changelog to make rpmlint and friends happy
-
-* Wed Apr 20 2016 Paul Moore <pmoore@redhat.com> - 2.3.1-0
-- New upstream version
-
-* Mon Jun 15 2015 Paul Moore <pmoore@redhat.com> - 2.2.1-1
-- Removed '--disable-static' from the build to ensure that scmp_sys_resolver
-  is self contained and resolve RPATH issues
-
-* Wed May 13 2015 Paul Moore <pmoore@redhat.com> - 2.2.1-0
-- New upstream version
-- Added aarch64 support
-- Move to an autotools based build system
-
-* Thu Feb 27 2014 Paul Moore <pmoore@redhat.com> - 2.1.1-2
-- Build with CFLAGS="${optflags}" (RHBZ #1070774)
-* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 2.1.1-1
-- Mass rebuild 2013-12-27
-
 * Tue Nov  5 2013 Paul Moore <pmoore@redhat.com> - 2.1.1-0
 - New upstream version
-- Added a %%check procedure for self-test during build
+- Added a %check procedure for self-test during build
 * Tue Jun 11 2013 Paul Moore <pmoore@redhat.com> - 2.1.0-0
 - New upstream version
 - Added support for the ARM architecture

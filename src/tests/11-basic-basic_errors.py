@@ -4,7 +4,7 @@
 # Seccomp Library test program
 #
 # Copyright (c) 2012 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <paul@paul-moore.com>
+# Author: Paul Moore <pmoore@redhat.com>
 #
 
 #
@@ -74,16 +74,11 @@ def test():
         pass
 
     f = SyscallFilter(ALLOW)
-    f.remove_arch(Arch())
-    f.add_arch(Arch("x86"))
+    if not f.exist_arch(Arch.X86):
+        f.add_arch(Arch.X86)
+        f.remove_arch(Arch.NATIVE)
     try:
         f.add_rule_exactly(KILL, "socket", Arg(0, EQ, 2))
-    except RuntimeError:
-        pass
-
-    f = SyscallFilter(ALLOW)
-    try:
-        f.add_rule(ERRNO(0xffff), "read")
     except RuntimeError:
         pass
 

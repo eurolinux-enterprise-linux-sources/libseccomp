@@ -1,7 +1,7 @@
 /**
  * Seccomp Library test program
  *
- * Author: Paul Moore <paul@paul-moore.com>, Vitaly Shukela <vi0oss@gmail.com>
+ * Author: Paul Moore <pmoore@redhat.com>, Vitaly Shukela <vi0oss@gmail.com>
  */
 
 /*
@@ -18,7 +18,6 @@
  * along with this library; if not, see <http://www.gnu.org/licenses>.
  */
 
-#include <errno.h>
 #include <unistd.h>
 
 #include <seccomp.h>
@@ -29,7 +28,7 @@ int main(int argc, char *argv[])
 {
 	int rc;
 	struct util_options opts;
-	scmp_filter_ctx ctx = NULL;
+	scmp_filter_ctx ctx;
 	struct scmp_arg_cmp arg_cmp;
 
 	rc = util_getopt(argc, argv, &opts);
@@ -38,7 +37,7 @@ int main(int argc, char *argv[])
 
 	ctx = seccomp_init(SCMP_ACT_KILL);
 	if (ctx == NULL)
-		return ENOMEM;
+		goto out;
 
 	arg_cmp = SCMP_A0(SCMP_CMP_EQ, STDIN_FILENO);
 	rc = seccomp_rule_add_exact_array(ctx, SCMP_ACT_ALLOW,

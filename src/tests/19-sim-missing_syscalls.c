@@ -2,7 +2,7 @@
  * Seccomp Library test program
  *
  * Copyright (c) 2013 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <paul@paul-moore.com>
+ * Author: Paul Moore <pmoore@redhat.com>
  */
 
 /*
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 {
 	int rc;
 	struct util_options opts;
-	scmp_filter_ctx ctx = NULL;
+	scmp_filter_ctx ctx;
 
 	rc = util_getopt(argc, argv, &opts);
 	if (rc < 0)
@@ -38,15 +38,16 @@ int main(int argc, char *argv[])
 
 	ctx = seccomp_init(SCMP_ACT_KILL);
 	if (ctx == NULL)
-		return ENOMEM;
-
-	rc = seccomp_arch_remove(ctx, SCMP_ARCH_NATIVE);
-	if (rc != 0)
 		goto out;
 
-	rc = seccomp_arch_add(ctx, SCMP_ARCH_X86);
-	if (rc != 0)
-		goto out;
+	if (seccomp_arch_native() != SCMP_ARCH_X86) {
+		rc = seccomp_arch_add(ctx, SCMP_ARCH_X86);
+		if (rc != 0)
+			goto out;
+		rc = seccomp_arch_remove(ctx, SCMP_ARCH_NATIVE);
+		if (rc != 0)
+			goto out;
+	}
 
 	rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(tuxcall), 0);
 	if (rc != 0)

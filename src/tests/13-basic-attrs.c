@@ -2,7 +2,7 @@
  * Seccomp Library test program
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <paul@paul-moore.com>
+ * Author: Paul Moore <pmoore@redhat.com>
  */
 
 /*
@@ -30,11 +30,11 @@ int main(int argc, char *argv[])
 {
 	int rc;
 	uint32_t val = (uint32_t)(-1);
-	scmp_filter_ctx ctx = NULL;
+	scmp_filter_ctx ctx;
 
 	ctx = seccomp_init(SCMP_ACT_ALLOW);
 	if (ctx == NULL)
-		return ENOMEM;
+		goto out;
 
 	rc = seccomp_attr_get(ctx, SCMP_FLTATR_ACT_DEFAULT, &val);
 	if (rc != 0)

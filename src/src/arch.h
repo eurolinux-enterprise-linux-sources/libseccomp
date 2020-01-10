@@ -2,7 +2,7 @@
  * Enhanced Seccomp Architecture/Machine Specific Code
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <paul@paul-moore.com>
+ * Author: Paul Moore <pmoore@redhat.com>
  */
 
 /*
@@ -30,12 +30,9 @@
 
 #include "system.h"
 
-struct db_filter;
 struct db_api_arg;
-struct db_api_rule_list;
 
 struct arch_def {
-	/* arch definition */
 	uint32_t token;
 	uint32_t token_bpf;
 	enum {
@@ -48,13 +45,6 @@ struct arch_def {
 		ARCH_ENDIAN_LITTLE,
 		ARCH_ENDIAN_BIG,
 	} endian;
-
-	/* arch specific functions */
-	int (*syscall_resolve_name)(const char *name);
-	const char *(*syscall_resolve_num)(int num);
-	int (*syscall_rewrite)(int *syscall);
-	int (*rule_add)(struct db_filter_col *col, struct db_filter *db,
-			bool strict, struct db_api_rule_list *rule);
 };
 
 /* arch_def for the current architecture */
@@ -88,22 +78,29 @@ struct arch_syscall_def {
 int arch_valid(uint32_t arch);
 
 const struct arch_def *arch_def_lookup(uint32_t token);
-const struct arch_def *arch_def_lookup_name(const char *arch_name);
 
 int arch_arg_count_max(const struct arch_def *arch);
 
+/**
+ * Determine the argument offset
+ * @param _arg the argument number
+ *
+ * Return the correct offset of the given argument.
+ *
+ */
+#define arch_arg_offset(_arg)	(offsetof(struct seccomp_data, args[_arg]))
+
 int arch_arg_offset_lo(const struct arch_def *arch, unsigned int arg);
 int arch_arg_offset_hi(const struct arch_def *arch, unsigned int arg);
-int arch_arg_offset(const struct arch_def *arch, unsigned int arg);
 
 int arch_syscall_resolve_name(const struct arch_def *arch, const char *name);
 const char *arch_syscall_resolve_num(const struct arch_def *arch, int num);
 
 int arch_syscall_translate(const struct arch_def *arch, int *syscall);
-int arch_syscall_rewrite(const struct arch_def *arch, int *syscall);
+int arch_syscall_rewrite(const struct arch_def *arch, bool strict,
+			 int *syscall);
 
-int arch_filter_rule_add(struct db_filter_col *col, struct db_filter *db,
-			 bool strict, uint32_t action, int syscall,
-			 unsigned int chain_len, struct db_api_arg *chain);
+int arch_filter_rewrite(const struct arch_def *arch,
+			bool strict, int *syscall, struct db_api_arg *chain);
 
 #endif

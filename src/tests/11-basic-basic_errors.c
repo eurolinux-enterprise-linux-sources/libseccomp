@@ -19,8 +19,8 @@
  * along with this library; if not, see <http://www.gnu.org/licenses>.
  */
 
-#include <errno.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <seccomp.h>
 
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 		rc = seccomp_rule_add(ctx, SCMP_ACT_KILL - 1, SCMP_SYS(read), 0);
 		if (rc != -EINVAL)
 			return -1;
-		rc = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(read), 7);
+		rc = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(read), 6);
 		if (rc != -EINVAL)
 			return -1;
 		rc = seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(read), 7,
@@ -117,24 +117,16 @@ int main(int argc, char *argv[])
 	ctx = seccomp_init(SCMP_ACT_ALLOW);
 	if (ctx == NULL)
 		return -1;
-	rc = seccomp_arch_remove(ctx, SCMP_ARCH_NATIVE);
-	if (rc != 0)
-		return -1;
-	rc = seccomp_arch_add(ctx, SCMP_ARCH_X86);
-	if (rc != 0)
-		return -1;
+	if (seccomp_arch_native() != SCMP_ARCH_X86) {
+		rc = seccomp_arch_add(ctx, SCMP_ARCH_X86);
+		if (rc != 0)
+			return -1;
+		rc = seccomp_arch_remove(ctx, SCMP_ARCH_NATIVE);
+		if (rc != 0)
+			return -1;
+	}
 	rc = seccomp_rule_add_exact(ctx, SCMP_ACT_KILL, SCMP_SYS(socket), 1,
 				    SCMP_A0(SCMP_CMP_EQ, 2));
-	if (rc != -EINVAL)
-		return -1;
-	seccomp_release(ctx);
-	ctx = NULL;
-
-	/* errno values beyond MAX_ERRNO */
-	ctx = seccomp_init(SCMP_ACT_ALLOW);
-	if (ctx == NULL)
-		return -1;
-	rc = seccomp_rule_add(ctx, SCMP_ACT_ERRNO(0xffff), 0, 0);
 	if (rc != -EINVAL)
 		return -1;
 	seccomp_release(ctx);

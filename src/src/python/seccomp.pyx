@@ -2,7 +2,7 @@
 # Seccomp Library Python Bindings
 #
 # Copyright (c) 2012,2013 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <paul@paul-moore.com>
+# Author: Paul Moore <pmoore@redhat.com>
 #
 
 #
@@ -79,16 +79,8 @@ KILL = libseccomp.SCMP_ACT_KILL
 TRAP = libseccomp.SCMP_ACT_TRAP
 ALLOW = libseccomp.SCMP_ACT_ALLOW
 def ERRNO(int errno):
-    """The action ERRNO(x) means that the syscall will return (x).
-    To conform to Linux syscall calling conventions, the syscall return
-    value should almost always be a negative number.
-    """
     return libseccomp.SCMP_ACT_ERRNO(errno)
 def TRACE(int value):
-    """The action TRACE(x) means that, if the process is being traced, (x)
-    will be returned to the tracing process via PTRACE_EVENT_SECCOMP
-    and the PTRACE_GETEVENTMSG option.
-    """
     return libseccomp.SCMP_ACT_TRACE(value)
 
 NE = libseccomp.SCMP_CMP_NE
@@ -118,16 +110,10 @@ def resolve_syscall(arch, syscall):
     Resolve an architecture's syscall name to the correct number or the
     syscall number to the correct name.
     """
-    cdef char *ret_str
-
-    if isinstance(syscall, basestring):
-        return libseccomp.seccomp_syscall_resolve_name_rewrite(arch, syscall)
-    elif isinstance(syscall, int):
-        ret_str = libseccomp.seccomp_syscall_resolve_num_arch(arch, syscall)
-        if ret_str is NULL:
-            raise ValueError('Unknown syscall %d on arch %d' % (syscall, arch))
-        else:
-            return ret_str
+    if (isinstance(syscall, basestring)):
+        return libseccomp.seccomp_syscall_resolve_name_arch(arch, syscall)
+    elif (isinstance(syscall, int)):
+        return libseccomp.seccomp_syscall_resolve_num_arch(arch, syscall)
     else:
         raise TypeError("Syscall must either be an int or str type")
 
@@ -140,98 +126,13 @@ cdef class Arch:
     X86_64 - 64-bit x86
     X32 - 64-bit x86 using the x32 ABI
     ARM - ARM
-    AARCH64 - 64-bit ARM
-    MIPS - MIPS O32 ABI
-    MIPS64 - MIPS 64-bit ABI
-    MIPS64N32 - MIPS N32 ABI
-    MIPSEL - MIPS little endian O32 ABI
-    MIPSEL64 - MIPS little endian 64-bit ABI
-    MIPSEL64N32 - MIPS little endian N32 ABI
-    PPC64 - 64-bit PowerPC
-    PPC - 32-bit PowerPC
     """
-
-    cdef int _token
 
     NATIVE = libseccomp.SCMP_ARCH_NATIVE
     X86 = libseccomp.SCMP_ARCH_X86
     X86_64 = libseccomp.SCMP_ARCH_X86_64
     X32 = libseccomp.SCMP_ARCH_X32
     ARM = libseccomp.SCMP_ARCH_ARM
-    AARCH64 = libseccomp.SCMP_ARCH_AARCH64
-    MIPS = libseccomp.SCMP_ARCH_MIPS
-    MIPS64 = libseccomp.SCMP_ARCH_MIPS64
-    MIPS64N32 = libseccomp.SCMP_ARCH_MIPS64N32
-    MIPSEL = libseccomp.SCMP_ARCH_MIPSEL
-    MIPSEL64 = libseccomp.SCMP_ARCH_MIPSEL64
-    MIPSEL64N32 = libseccomp.SCMP_ARCH_MIPSEL64N32
-    PPC = libseccomp.SCMP_ARCH_PPC
-    PPC64 = libseccomp.SCMP_ARCH_PPC64
-    PPC64LE = libseccomp.SCMP_ARCH_PPC64LE
-    S390 = libseccomp.SCMP_ARCH_S390
-    S390X = libseccomp.SCMP_ARCH_S390X
-
-    def __cinit__(self, arch=libseccomp.SCMP_ARCH_NATIVE):
-        """ Initialize the architecture object.
-
-        Arguments:
-        arch - the architecture name or token value
-
-        Description:
-        Create an architecture object using the given name or token value.
-        """
-        if isinstance(arch, int):
-            if arch == libseccomp.SCMP_ARCH_NATIVE:
-                self._token = libseccomp.seccomp_arch_native()
-            elif arch == libseccomp.SCMP_ARCH_X86:
-                self._token = libseccomp.SCMP_ARCH_X86
-            elif arch == libseccomp.SCMP_ARCH_X86_64:
-                self._token = libseccomp.SCMP_ARCH_X86_64
-            elif arch == libseccomp.SCMP_ARCH_X32:
-                self._token = libseccomp.SCMP_ARCH_X32
-            elif arch == libseccomp.SCMP_ARCH_ARM:
-                self._token = libseccomp.SCMP_ARCH_ARM
-            elif arch == libseccomp.SCMP_ARCH_AARCH64:
-                self._token = libseccomp.SCMP_ARCH_AARCH64
-            elif arch == libseccomp.SCMP_ARCH_MIPS:
-                self._token = libseccomp.SCMP_ARCH_MIPS
-            elif arch == libseccomp.SCMP_ARCH_MIPS64:
-                self._token = libseccomp.SCMP_ARCH_MIPS64
-            elif arch == libseccomp.SCMP_ARCH_MIPS64N32:
-                self._token = libseccomp.SCMP_ARCH_MIPS64N32
-            elif arch == libseccomp.SCMP_ARCH_MIPSEL:
-                self._token = libseccomp.SCMP_ARCH_MIPSEL
-            elif arch == libseccomp.SCMP_ARCH_MIPSEL64:
-                self._token = libseccomp.SCMP_ARCH_MIPSEL64
-            elif arch == libseccomp.SCMP_ARCH_MIPSEL64N32:
-                self._token = libseccomp.SCMP_ARCH_MIPSEL64N32
-            elif arch == libseccomp.SCMP_ARCH_PPC:
-                self._token = libseccomp.SCMP_ARCH_PPC
-            elif arch == libseccomp.SCMP_ARCH_PPC64:
-                self._token = libseccomp.SCMP_ARCH_PPC64
-            elif arch == libseccomp.SCMP_ARCH_PPC64LE:
-                self._token = libseccomp.SCMP_ARCH_PPC64LE
-            elif arch == libseccomp.SCMP_ARCH_S390:
-                self._token = libseccomp.SCMP_ARCH_S390
-            elif arch == libseccomp.SCMP_ARCH_S390X:
-                self._token = libseccomp.SCMP_ARCH_S390X
-            else:
-                self._token = 0;
-        elif isinstance(arch, basestring):
-            self._token = libseccomp.seccomp_arch_resolve_name(arch)
-        else:
-            raise TypeError("Architecture must be an int or str type")
-        if self._token == 0:
-            raise ValueError("Invalid architecture")
-
-    def __int__(self):
-        """ Convert the architecture object to a token value.
-
-        Description:
-        Convert the architecture object to an integer representing the
-        architecture's token value.
-        """
-        return self._token
 
 cdef class Attr:
     """ Python object representing the SyscallFilter attributes.
@@ -240,12 +141,10 @@ cdef class Attr:
     ACT_DEFAULT - the filter's default action
     ACT_BADARCH - the filter's bad architecture action
     CTL_NNP - the filter's "no new privileges" flag
-    CTL_NNP - the filter's thread sync flag
     """
     ACT_DEFAULT = libseccomp.SCMP_FLTATR_ACT_DEFAULT
     ACT_BADARCH = libseccomp.SCMP_FLTATR_ACT_BADARCH
     CTL_NNP = libseccomp.SCMP_FLTATR_CTL_NNP
-    CTL_TSYNC = libseccomp.SCMP_FLTATR_CTL_TSYNC
 
 cdef class Arg:
     """ Python object representing a SyscallFilter syscall argument.
@@ -256,7 +155,7 @@ cdef class Arg:
         """ Initialize the argument comparison.
 
         Arguments:
-        arg - the argument number, starting at 0
+        arg - the arguement number, starting at 0
         op - the argument comparison operator, e.g. {NE,LT,LE,...}
         datum_a - argument value
         datum_b - argument value, only valid when op == MASKED_EQ
@@ -269,7 +168,7 @@ cdef class Arg:
         self._arg.datum_a = datum_a
         self._arg.datum_b = datum_b
 
-    cdef libseccomp.scmp_arg_cmp to_c(self):
+    def to_c(self):
         """ Convert the object into a C structure.
 
         Description:
@@ -428,7 +327,7 @@ cdef class SyscallFilter:
         Lookup the given attribute in the filter and return the
         attribute's value to the caller.
         """
-        cdef uint32_t value = 0
+        value = 0
         rc = libseccomp.seccomp_attr_get(self._ctx,
                                          attr, <uint32_t *>&value)
         if rc == -errno.EINVAL:
@@ -512,9 +411,6 @@ cdef class SyscallFilter:
         """ NOTE: the code below exists solely to deal with the varadic
         nature of seccomp_rule_add() function and the inability of Cython
         to handle this automatically """
-        if len(args) > 6:
-            raise RuntimeError("Maximum number of arguments exceeded")
-        cdef Arg arg
         for i, arg in enumerate(args):
             c_arg[i] = arg.to_c()
         if len(args) == 0:
@@ -594,9 +490,6 @@ cdef class SyscallFilter:
         """ NOTE: the code below exists solely to deal with the varadic
         nature of seccomp_rule_add_exact() function and the inability of
         Cython to handle this automatically """
-        if len(args) > 6:
-            raise RuntimeError("Maximum number of arguments exceeded")
-        cdef Arg arg
         for i, arg in enumerate(args):
             c_arg[i] = arg.to_c()
         if len(args) == 0:

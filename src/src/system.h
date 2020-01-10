@@ -1,8 +1,8 @@
 /**
- * Seccomp System Interfaces
+ * Seccomp System Information
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <paul@paul-moore.com>
+ * Author: Paul Moore <pmoore@redhat.com>
  */
 
 /*
@@ -23,16 +23,11 @@
 #define _SYSTEM_H
 
 #include <linux/filter.h>
-#include <sys/prctl.h>
+#include <linux/prctl.h>
 
-#include "configure.h"
+#include <configure.h>
 
-/* NOTE: this was taken from the Linux Kernel sources */
-#define MAX_ERRNO		4095
-
-struct db_filter_col;
-
-#ifdef HAVE_LINUX_SECCOMP_H
+#ifdef CONF_SYSINC_SECCOMP
 
 /* system header file */
 #include <linux/seccomp.h>
@@ -65,14 +60,14 @@ struct db_filter_col;
 #define SECCOMP_RET_ACTION	0x7fff0000U
 #define SECCOMP_RET_DATA	0x0000ffffU
 
-/**
+/*
  * struct seccomp_data - the format the BPF program executes over.
  * @nr: the system call number
  * @arch: indicates system call convention as an AUDIT_ARCH_* value
- *        as defined in <linux/audit.h>.
+ *	  as defined in <linux/audit.h>.
  * @instruction_pointer: at the time of the system call.
  * @args: up to 6 system call arguments always stored as 64-bit values
- *        regardless of the architecture.
+ *	  regardless of the architecture.
  */
 struct seccomp_data {
 	int nr;
@@ -81,36 +76,17 @@ struct seccomp_data {
 	__u64 args[6];
 };
 
-#endif /* HAVE_LINUX_SECCOMP_H */
+#endif /* CONF_SYSINC_SECCOMP */
 
 /* rename some of the socket filter types to make more sense */
 typedef struct sock_filter bpf_instr_raw;
 
-/* no new privs defintions */
 #ifndef PR_SET_NO_NEW_PRIVS
-#define PR_SET_NO_NEW_PRIVS		38
-#endif
+#define PR_SET_NO_NEW_PRIVS	38
+#endif /* PR_SET_NO_NEW_PRIVS */
 
 #ifndef PR_GET_NO_NEW_PRIVS
-#define PR_GET_NO_NEW_PRIVS		39
-#endif
-
-/* operations for the seccomp() syscall */
-#ifndef SECCOMP_SET_MODE_STRICT
-#define SECCOMP_SET_MODE_STRICT		0
-#endif
-#ifndef SECCOMP_SET_MODE_FILTER
-#define SECCOMP_SET_MODE_FILTER		1
-#endif
-
-/* flags for the seccomp() syscall */
-#ifndef SECCOMP_FILTER_FLAG_TSYNC
-#define SECCOMP_FILTER_FLAG_TSYNC	1
-#endif
-
-int sys_chk_seccomp_syscall(void);
-int sys_chk_seccomp_flag(int flag);
-
-int sys_filter_load(const struct db_filter_col *col);
+#define PR_GET_NO_NEW_PRIVS	39
+#endif /* PR_GET_NO_NEW_PRIVS */
 
 #endif

@@ -2,7 +2,7 @@
  * Enhanced Seccomp x32 Specific Code
  *
  * Copyright (c) 2013 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <paul@paul-moore.com>
+ * Author: Paul Moore <pmoore@redhat.com>
  */
 
 /*
@@ -29,11 +29,11 @@
 
 #define X32_SYSCALL_BIT			0x40000000
 
+#define x32_arg_count_max		6
+
 extern const struct arch_def arch_def_x32;
 
 int x32_syscall_resolve_name(const char *name);
 const char *x32_syscall_resolve_num(int num);
-
-const char *x32_syscall_iterate_name(unsigned int spot);
 
 #endif

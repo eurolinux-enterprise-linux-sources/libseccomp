@@ -4,7 +4,7 @@
 # Seccomp Library test program
 #
 # Copyright (c) 2012 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <paul@paul-moore.com>
+# Author: Paul Moore <pmoore@redhat.com>
 #
 
 #
@@ -31,10 +31,12 @@ from seccomp import *
 def test(args):
     f32 = SyscallFilter(KILL)
     f64 = SyscallFilter(KILL)
-    f32.remove_arch(Arch())
-    f64.remove_arch(Arch())
-    f32.add_arch(Arch("x86"))
-    f64.add_arch(Arch("x86_64"))
+    if not f32.exist_arch(Arch.X86):
+        f32.add_arch(Arch.X86)
+        f32.remove_arch(Arch.NATIVE)
+    if not f64.exist_arch(Arch.X86_64):
+        f64.add_arch(Arch.X86_64)
+        f64.remove_arch(Arch.NATIVE)
     f32.add_rule(ALLOW, "read", Arg(0, EQ, sys.stdin.fileno()))
     f32.add_rule(ALLOW, "write", Arg(0, EQ, sys.stdout.fileno()))
     f32.add_rule(ALLOW, "write", Arg(0, EQ, sys.stderr.fileno()))

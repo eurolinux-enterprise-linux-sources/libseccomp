@@ -1,8 +1,8 @@
 /**
  * Enhanced Seccomp Filter DB
  *
- * Copyright (c) 2012,2016 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <paul@paul-moore.com>
+ * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
+ * Author: Paul Moore <pmoore@redhat.com>
  */
 
 /*
@@ -30,7 +30,6 @@
 
 #include "arch.h"
 #include "db.h"
-#include "system.h"
 
 /* state values */
 #define _DB_STA_VALID			0xA1B2C3D4
@@ -73,9 +72,10 @@ static unsigned int __db_tree_free(struct db_arg_chain_tree *tree)
 
 /**
  * Free a syscall filter argument chain tree
- * @param tree the argument chain list
+ * @param list the argument chain list
  *
- * This function frees a tree and returns the number of nodes freed.
+ * This function frees a syscall argument chain list and returns the number of
+ * nodes freed.
  *
  */
 static unsigned int _db_tree_free(struct db_arg_chain_tree *tree)
@@ -347,169 +347,26 @@ next:
 }
 
 /**
- * Free and reset the seccomp filter DB
- * @param db the seccomp filter DB
+ * Validate the seccomp action
+ * @param action the seccomp action
  *
- * This function frees any existing filters and resets the filter DB to a
- * default state; only the DB architecture is preserved.
- *
+ * Verify that the given action is a valid seccomp action; return zero if
+ * valid, -EINVAL if invalid.
  */
-static void _db_reset(struct db_filter *db)
+int db_action_valid(uint32_t action)
 {
-	struct db_sys_list *s_iter;
-	struct db_api_rule_list *r_iter;
-
-	if (db == NULL)
-		return;
-
-	/* free any filters */
-	if (db->syscalls != NULL) {
-		s_iter = db->syscalls;
-		while (s_iter != NULL) {
-			db->syscalls = s_iter->next;
-			_db_tree_free(s_iter->chains);
-			free(s_iter);
-			s_iter = db->syscalls;
-		}
-		db->syscalls = NULL;
-	}
-
-	/* free any rules */
-	if (db->rules != NULL) {
-		/* split the loop first then loop and free */
-		db->rules->prev->next = NULL;
-		r_iter = db->rules;
-		while (r_iter != NULL) {
-			db->rules = r_iter->next;
-			free(r_iter->args);
-			free(r_iter);
-			r_iter = db->rules;
-		}
-		db->rules = NULL;
-	}
-}
-
-/**
- * Intitalize a seccomp filter DB
- * @param arch the architecture definition
- *
- * This function initializes a seccomp filter DB and readies it for use.
- * Returns a pointer to the DB on success, NULL on failure.
- *
- */
-static struct db_filter *_db_init(const struct arch_def *arch)
-{
-	struct db_filter *db;
-
-	db = malloc(sizeof(*db));
-	if (db == NULL)
-		return NULL;
-
-	/* clear the buffer for the first time and set the arch */
-	memset(db, 0, sizeof(*db));
-	db->arch = arch;
-
-	/* reset the DB to a known state */
-	_db_reset(db);
-
-	return db;
-}
-
-/**
- * Destroy a seccomp filter DB
- * @param db the seccomp filter DB
- *
- * This function destroys a seccomp filter DB.  After calling this function,
- * the filter should no longer be referenced.
- *
- */
-static void _db_release(struct db_filter *db)
-{
-	if (db == NULL)
-		return;
-
-	/* free and reset the DB */
-	_db_reset(db);
-	free(db);
-}
-
-/**
- * Destroy a seccomp filter snapshot
- * @param snap the seccomp filter snapshot
- *
- * This function destroys a seccomp filter snapshot.  After calling this
- * function, the snapshot should no longer be referenced.
- *
- */
-static void _db_snap_release(struct db_filter_snap *snap)
-{
-	unsigned int iter;
-
-	if (snap->filter_cnt > 0) {
-		for (iter = 0; iter < snap->filter_cnt; iter++) {
-			if (snap->filters[iter])
-				_db_release(snap->filters[iter]);
-		}
-		free(snap->filters);
-	}
-	free(snap);
-}
-
-/**
- * Update the user specified portion of the syscall priority
- * @param db the seccomp filter db
- * @param syscall the syscall number
- * @param priority the syscall priority
- *
- * This function sets, or updates, the syscall priority; the highest priority
- * value between the existing and specified value becomes the new syscall
- * priority.  If the syscall entry does not already exist, a new phantom
- * syscall entry is created as a placeholder.  Returns zero on success,
- * negative values on failure.
- *
- */
-static int _db_syscall_priority(struct db_filter *db,
-				int syscall, uint8_t priority)
-{
-	unsigned int sys_pri = _DB_PRI_USER(priority);
-	struct db_sys_list *s_new, *s_iter, *s_prev = NULL;
-
-	assert(db != NULL);
-
-	s_iter = db->syscalls;
-	while (s_iter != NULL && s_iter->num < syscall) {
-		s_prev = s_iter;
-		s_iter = s_iter->next;
-	}
-
-	/* matched an existing syscall entry */
-	if (s_iter != NULL && s_iter->num == syscall) {
-		if (sys_pri > (s_iter->priority & _DB_PRI_MASK_USER)) {
-			s_iter->priority &= (~_DB_PRI_MASK_USER);
-			s_iter->priority |= sys_pri;
-		}
+	if (action == SCMP_ACT_KILL)
 		return 0;
-	}
+	else if (action == SCMP_ACT_TRAP)
+		return 0;
+	else if (action == SCMP_ACT_ERRNO(action & 0x0000ffff))
+		return 0;
+	else if (action == SCMP_ACT_TRACE(action & 0x0000ffff))
+		return 0;
+	else if (action == SCMP_ACT_ALLOW)
+		return 0;
 
-	/* no existing syscall entry - create a phantom entry */
-	s_new = malloc(sizeof(*s_new));
-	if (s_new == NULL)
-		return -ENOMEM;
-	memset(s_new, 0, sizeof(*s_new));
-	s_new->num = syscall;
-	s_new->priority = sys_pri;
-	s_new->valid = false;
-
-	/* add it before s_iter */
-	if (s_prev != NULL) {
-		s_new->next = s_prev->next;
-		s_prev->next = s_new;
-	} else {
-		s_new->next = db->syscalls;
-		db->syscalls = s_new;
-	}
-
-	return 0;
+	return -EINVAL;
 }
 
 /**
@@ -518,60 +375,30 @@ static int _db_syscall_priority(struct db_filter *db,
  * @param def_action the default filter action
  *
  * This function frees any existing filter DBs and resets the collection to a
- * default state.  In the case of failure the filter collection may be in an
- * unknown state and should be released.  Returns zero on success, negative
- * values on failure.
+ * default state.
  *
  */
-int db_col_reset(struct db_filter_col *col, uint32_t def_action)
+void db_col_reset(struct db_filter_col *col, uint32_t def_action)
 {
 	unsigned int iter;
-	struct db_filter *db;
-	struct db_filter_snap *snap;
 
 	if (col == NULL)
-		return -EINVAL;
+		return;
 
 	/* free any filters */
 	for (iter = 0; iter < col->filter_cnt; iter++)
-		_db_release(col->filters[iter]);
+		db_release(col->filters[iter]);
 	col->filter_cnt = 0;
-	if (col->filters)
-		free(col->filters);
+	free(col->filters);
 	col->filters = NULL;
-
-	/* set the endianess to undefined */
-	col->endian = 0;
 
 	/* set the default attribute values */
 	col->attr.act_default = def_action;
 	col->attr.act_badarch = SCMP_ACT_KILL;
 	col->attr.nnp_enable = 1;
-	col->attr.tsync_enable = 0;
 
 	/* set the state */
 	col->state = _DB_STA_VALID;
-
-	/* reset the initial db */
-	db = _db_init(arch_def_native);
-	if (db == NULL)
-		return -ENOMEM;
-	if (db_col_db_add(col, db) < 0) {
-		_db_release(db);
-		return -ENOMEM;
-	}
-
-	/* reset the transactions */
-	while (col->snapshots) {
-		snap = col->snapshots;
-		col->snapshots = snap->next;
-		for (iter = 0; iter < snap->filter_cnt; iter++)
-			_db_release(snap->filters[iter]);
-		free(snap->filters);
-		free(snap);
-	}
-
-	return 0;
 }
 
 /**
@@ -594,14 +421,9 @@ struct db_filter_col *db_col_init(uint32_t def_action)
 	memset(col, 0, sizeof(*col));
 
 	/* reset the DB to a known state */
-	if (db_col_reset(col, def_action) < 0)
-		goto init_failure;
+	db_col_reset(col, def_action);
 
 	return col;
-
-init_failure:
-	db_col_release(col);
-	return NULL;
 }
 
 /**
@@ -614,48 +436,15 @@ init_failure:
  */
 void db_col_release(struct db_filter_col *col)
 {
-	unsigned int iter;
-
 	if (col == NULL)
 		return;
 
 	/* set the state, just in case */
 	col->state = _DB_STA_FREED;
 
-	/* free any filters */
-	for (iter = 0; iter < col->filter_cnt; iter++)
-		_db_release(col->filters[iter]);
-	col->filter_cnt = 0;
-	if (col->filters)
-		free(col->filters);
-	col->filters = NULL;
-
-	/* free the collection */
+	/* free and reset the DB */
+	db_col_reset(col, 0);
 	free(col);
-}
-
-/**
- * Validate the seccomp action
- * @param action the seccomp action
- *
- * Verify that the given action is a valid seccomp action; return zero if
- * valid, -EINVAL if invalid.
- */
-int db_action_valid(uint32_t action)
-{
-	if (action == SCMP_ACT_KILL)
-		return 0;
-	else if (action == SCMP_ACT_TRAP)
-		return 0;
-	else if ((action == SCMP_ACT_ERRNO(action & 0x0000ffff)) &&
-		 ((action & 0x0000ffff) < MAX_ERRNO))
-		return 0;
-	else if (action == SCMP_ACT_TRACE(action & 0x0000ffff))
-		return 0;
-	else if (action == SCMP_ACT_ALLOW)
-		return 0;
-
-	return -EINVAL;
 }
 
 /**
@@ -668,7 +457,7 @@ int db_action_valid(uint32_t action)
  */
 int db_col_valid(struct db_filter_col *col)
 {
-	if (col != NULL && col->state == _DB_STA_VALID && col->filter_cnt > 0)
+	if (col != NULL && col->state == _DB_STA_VALID)
 		return 0;
 	return -EINVAL;
 }
@@ -687,10 +476,6 @@ int db_col_merge(struct db_filter_col *col_dst, struct db_filter_col *col_src)
 {
 	unsigned int iter_a, iter_b;
 	struct db_filter **dbs;
-
-	/* verify that the endianess is a match */
-	if (col_dst->endian != col_src->endian)
-		return -EEXIST;
 
 	/* make sure we don't have any arch/filter collisions */
 	for (iter_a = 0; iter_a < col_dst->filter_cnt; iter_a++) {
@@ -769,9 +554,6 @@ int db_col_attr_get(const struct db_filter_col *col,
 	case SCMP_FLTATR_CTL_NNP:
 		*value = col->attr.nnp_enable;
 		break;
-	case SCMP_FLTATR_CTL_TSYNC:
-		*value = col->attr.tsync_enable;
-		break;
 	default:
 		rc = -EEXIST;
 		break;
@@ -782,7 +564,7 @@ int db_col_attr_get(const struct db_filter_col *col,
 
 /**
  * Set a filter attribute
- * @param col the seccomp filter collection
+ * @param db the seccomp filter collection
  * @param attr the filter attribute
  * @param value the filter attribute value
  *
@@ -809,45 +591,10 @@ int db_col_attr_set(struct db_filter_col *col,
 	case SCMP_FLTATR_CTL_NNP:
 		col->attr.nnp_enable = (value ? 1 : 0);
 		break;
-	case SCMP_FLTATR_CTL_TSYNC:
-		rc = sys_chk_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC);
-		if (rc == 1) {
-			/* supported */
-			rc = 0;
-			col->attr.tsync_enable = (value ? 1 : 0);
-		} else if (rc == 0)
-			/* unsupported */
-			rc = -EOPNOTSUPP;
-		break;
 	default:
 		rc = -EEXIST;
 		break;
 	}
-
-	return rc;
-}
-
-/**
- * Add a new architecture filter to a filter collection
- * @param col the seccomp filter collection
- * @param arch the architecture
- *
- * This function adds a new architecture filter DB to an existing seccomp
- * filter collection assuming there isn't a filter DB already present with the
- * same architecture.  Returns zero on success, negative values on failure.
- *
- */
-int db_col_db_new(struct db_filter_col *col, const struct arch_def *arch)
-{
-	int rc;
-	struct db_filter *db;
-
-	db = _db_init(arch);
-	if (db == NULL)
-		return -ENOMEM;
-	rc = db_col_db_add(col, db);
-	if (rc < 0)
-		_db_release(db);
 
 	return rc;
 }
@@ -866,9 +613,6 @@ int db_col_db_add(struct db_filter_col *col, struct db_filter *db)
 {
 	struct db_filter **dbs;
 
-	if (col->endian != 0 && col->endian != db->arch->endian)
-		return -EEXIST;
-
 	if (db_col_arch_exist(col, db->arch->token))
 		return -EEXIST;
 
@@ -879,8 +623,6 @@ int db_col_db_add(struct db_filter_col *col, struct db_filter *db)
 	col->filters = dbs;
 	col->filter_cnt++;
 	col->filters[col->filter_cnt - 1] = db;
-	if (col->endian == 0)
-		col->endian = db->arch->endian;
 
 	return 0;
 }
@@ -900,79 +642,174 @@ int db_col_db_remove(struct db_filter_col *col, uint32_t arch_token)
 	unsigned int found;
 	struct db_filter **dbs;
 
-	if ((col->filter_cnt <= 0) || (db_col_arch_exist(col, arch_token) == 0))
+	if ((col->filter_cnt <= 1) || (db_col_arch_exist(col, arch_token) == 0))
 		return -EINVAL;
 
 	for (found = 0, iter = 0; iter < col->filter_cnt; iter++) {
 		if (found)
 			col->filters[iter - 1] = col->filters[iter];
 		else if (col->filters[iter]->arch->token == arch_token) {
-			_db_release(col->filters[iter]);
+			db_release(col->filters[iter]);
 			found = 1;
 		}
 	}
 	col->filters[--col->filter_cnt] = NULL;
 
-	if (col->filter_cnt > 0) {
-		/* NOTE: if we can't do the realloc it isn't fatal, we just
-		 *       have some extra space allocated */
-		dbs = realloc(col->filters,
-			      sizeof(struct db_filter *) * col->filter_cnt);
-		if (dbs != NULL)
-			col->filters = dbs;
+	/* NOTE: if we can't do the realloc it isn't fatal, we just have some
+	 *       extra space that will get cleaned up later */
+	dbs = realloc(col->filters,
+		      sizeof(struct db_filter *) * col->filter_cnt);
+	if (dbs != NULL)
+		col->filters = dbs;
+
+	return 0;
+}
+
+/**
+ * Free and reset the seccomp filter DB
+ * @param db the seccomp filter DB
+ * @param def_action the default filter action
+ *
+ * This function frees any existing filters and resets the filter DB to a
+ * default state; only the DB architecture is preserved.
+ *
+ */
+void db_reset(struct db_filter *db)
+{
+	struct db_sys_list *s_iter;
+
+	if (db == NULL)
+		return;
+
+	/* free any filters */
+	if (db->syscalls != NULL) {
+		s_iter = db->syscalls;
+		while (s_iter != NULL) {
+			db->syscalls = s_iter->next;
+			_db_tree_free(s_iter->chains);
+			free(s_iter);
+			s_iter = db->syscalls;
+		}
+		db->syscalls = NULL;
+	}
+}
+
+/**
+ * Intitalize a seccomp filter DB
+ * @param arch the architecture definition
+ *
+ * This function initializes a seccomp filter DB and readies it for use.
+ * Returns a pointer to the DB on success, NULL on failure.
+ *
+ */
+struct db_filter *db_init(const struct arch_def *arch)
+{
+	struct db_filter *db;
+
+	db = malloc(sizeof(*db));
+	if (db == NULL)
+		return NULL;
+
+	/* clear the buffer for the first time and set the arch */
+	memset(db, 0, sizeof(*db));
+	db->arch = arch;
+
+	/* reset the DB to a known state */
+	db_reset(db);
+
+	return db;
+}
+
+/**
+ * Destroy a seccomp filter DB
+ * @param db the seccomp filter DB
+ *
+ * This function destroys a seccomp filter DB.  After calling this function,
+ * the filter should no longer be referenced.
+ *
+ */
+void db_release(struct db_filter *db)
+{
+	if (db == NULL)
+		return;
+
+	/* free and reset the DB */
+	db_reset(db);
+	free(db);
+}
+
+/**
+ * Update the user specified portion of the syscall priority
+ * @param db the seccomp filter db
+ * @param syscall the syscall number
+ * @param priority the syscall priority
+ *
+ * This function sets, or updates, the syscall priority; the highest priority
+ * value between the existing and specified value becomes the new syscall
+ * priority.  If the syscall entry does not already exist, a new phantom
+ * syscall entry is created as a placeholder.  Returns zero on success,
+ * negative values on failure.
+ *
+ */
+int db_syscall_priority(struct db_filter *db,
+			unsigned int syscall, uint8_t priority)
+{
+	unsigned int sys_pri = _DB_PRI_USER(priority);
+	struct db_sys_list *s_new, *s_iter, *s_prev = NULL;
+
+	assert(db != NULL);
+
+	s_iter = db->syscalls;
+	while (s_iter != NULL && s_iter->num < syscall) {
+		s_prev = s_iter;
+		s_iter = s_iter->next;
+	}
+
+	/* matched an existing syscall entry */
+	if (s_iter != NULL && s_iter->num == syscall) {
+		if (sys_pri > (s_iter->priority & _DB_PRI_MASK_USER)) {
+			s_iter->priority &= (~_DB_PRI_MASK_USER);
+			s_iter->priority |= sys_pri;
+		}
+		return 0;
+	}
+
+	/* no existing syscall entry - create a phantom entry */
+	s_new = malloc(sizeof(*s_new));
+	if (s_new == NULL)
+		return -ENOMEM;
+	memset(s_new, 0, sizeof(*s_new));
+	s_new->num = syscall;
+	s_new->priority = sys_pri;
+	s_new->valid = false;
+
+	/* add it before s_iter */
+	if (s_prev != NULL) {
+		s_new->next = s_prev->next;
+		s_prev->next = s_new;
 	} else {
-		/* this was the last filter so free all the associated memory
-		 * and reset the endian token */
-		free(col->filters);
-		col->filters = NULL;
-		col->endian = 0;
+		s_new->next = db->syscalls;
+		db->syscalls = s_new;
 	}
 
 	return 0;
 }
 
 /**
- * Test if the argument filter can be skipped because it's a tautology
- * @param arg argument filter
- *
- * If this argument filter applied to the lower 32 bit can be skipped this
- * function returns false.
- *
- */
-static bool _db_arg_cmp_need_lo(const struct db_api_arg *arg)
-{
-	if (arg->op == SCMP_CMP_MASKED_EQ && D64_LO(arg->mask) == 0)
-		return false;
-
-	return true;
-}
-
-/**
- * Test if the argument filter can be skipped because it's a tautology
- * @param arg argument filter
- *
- * If this argument filter applied to the upper 32 bit can be skipped this
- * function returns false.
- *
- */
-static bool _db_arg_cmp_need_hi(const struct db_api_arg *arg)
-{
-	if (arg->op == SCMP_CMP_MASKED_EQ && D64_HI(arg->mask) == 0)
-		return false;
-
-	return true;
-}
-
-/**
  * Fixup the node based on the op/mask
  * @param node the chain node
  *
- * Ensure the datum is masked as well.
+ * Apply some simplifications based on the comparison op and mask value.
  *
  */
 static void _db_node_mask_fixup(struct db_arg_chain_tree *node)
 {
-	node->datum &= node->mask;
+	if (node->op == SCMP_CMP_MASKED_EQ && node->mask == 0) {
+		node->op = SCMP_CMP_EQ;
+		node->mask = ARG_MASK_MAX;
+		node->datum = 0;
+	} else
+		node->datum &= node->mask;
 }
 
 /**
@@ -1006,17 +843,8 @@ static struct db_sys_list *_db_rule_gen_64(const struct arch_def *arch,
 	s_new->valid = true;
 	/* run through the argument chain */
 	chain_len_max = arch_arg_count_max(arch);
-	if (chain_len_max < 0)
-		goto gen_64_failure;
 	for (iter = 0; iter < chain_len_max; iter++) {
 		if (chain[iter].valid == 0)
-			continue;
-
-		/* TODO: handle the case were either hi or lo isn't needed */
-
-		/* skip generating instruction which are no-ops */
-		if (!_db_arg_cmp_need_hi(&chain[iter]) &&
-		    !_db_arg_cmp_need_lo(&chain[iter]))
 			continue;
 
 		c_iter_hi = malloc(sizeof(*c_iter_hi));
@@ -1145,14 +973,8 @@ static struct db_sys_list *_db_rule_gen_32(const struct arch_def *arch,
 	s_new->valid = true;
 	/* run through the argument chain */
 	chain_len_max = arch_arg_count_max(arch);
-	if (chain_len_max < 0)
-		goto gen_32_failure;
 	for (iter = 0; iter < chain_len_max; iter++) {
 		if (chain[iter].valid == 0)
-			continue;
-
-		/* skip generating instructions which are no-ops */
-		if (!_db_arg_cmp_need_lo(&chain[iter]))
 			continue;
 
 		c_iter = malloc(sizeof(*c_iter));
@@ -1161,9 +983,8 @@ static struct db_sys_list *_db_rule_gen_32(const struct arch_def *arch,
 		memset(c_iter, 0, sizeof(*c_iter));
 		c_iter->refcnt = 1;
 		c_iter->arg = chain[iter].arg;
-		c_iter->arg_offset = arch_arg_offset(arch, c_iter->arg);
+		c_iter->arg_offset = arch_arg_offset(c_iter->arg);
 		c_iter->op = chain[iter].op;
-		/* implicitly strips off the upper 32 bit */
 		c_iter->mask = chain[iter].mask;
 		c_iter->datum = chain[iter].datum;
 
@@ -1224,7 +1045,9 @@ gen_32_failure:
 /**
  * Add a new rule to the seccomp filter DB
  * @param db the seccomp filter db
- * @param rule the filter rule
+ * @param action the filter action
+ * @param syscall the syscall number
+ * @param chain argument filter chain
  *
  * This function adds a new syscall filter to the seccomp filter DB, adding to
  * the existing filters for the syscall, unless no argument specific filters
@@ -1233,12 +1056,10 @@ gen_32_failure:
  * filter DB. Returns zero on success, negative values on failure.
  *
  */
-int db_rule_add(struct db_filter *db, const struct db_api_rule_list *rule)
+int db_rule_add(struct db_filter *db, uint32_t action, unsigned int syscall,
+		struct db_api_arg *chain)
 {
 	int rc = -ENOMEM;
-	int syscall = rule->syscall;
-	uint32_t action = rule->action;
-	struct db_api_arg *chain = rule->args;
 	struct db_sys_list *s_new, *s_iter, *s_prev = NULL;
 	struct db_arg_chain_tree *c_iter = NULL, *c_prev = NULL;
 	struct db_arg_chain_tree *ec_iter;
@@ -1490,277 +1311,4 @@ add_priority_update:
 		s_iter->priority |= (_DB_PRI_MASK_CHAIN - s_iter->node_cnt);
 	}
 	return rc;
-}
-
-/**
- * Set the priority of a given syscall
- * @param col the filter collection
- * @param syscall the syscall number
- * @param priority priority value, higher value == higher priority
- *
- * This function sets the priority of the given syscall; this value is used
- * when generating the seccomp filter code such that higher priority syscalls
- * will incur less filter code overhead than the lower priority syscalls in the
- * filter.  Returns zero on success, negative values on failure.
- *
- */
-int db_col_syscall_priority(struct db_filter_col *col,
-			    int syscall, uint8_t priority)
-{
-	int rc = 0, rc_tmp;
-	unsigned int iter;
-	int sc_tmp;
-	struct db_filter *filter;
-
-	for (iter = 0; iter < col->filter_cnt; iter++) {
-		filter = col->filters[iter];
-		sc_tmp = syscall;
-
-		rc_tmp = arch_syscall_translate(filter->arch, &sc_tmp);
-		if (rc_tmp < 0)
-			goto priority_failure;
-
-		/* if this is a pseudo syscall (syscall < 0) then we need to
-		 * rewrite the syscall for some arch specific reason */
-		if (sc_tmp < 0) {
-			/* we set this as a strict op - we don't really care
-			 * since priorities are a "best effort" thing - as we
-			 * want to catch the -EDOM error and bail on this
-			 * architecture */
-			rc_tmp = arch_syscall_rewrite(filter->arch, &sc_tmp);
-			if (rc_tmp == -EDOM)
-				continue;
-			if (rc_tmp < 0)
-				goto priority_failure;
-		}
-
-		rc_tmp = _db_syscall_priority(filter, sc_tmp, priority);
-
-priority_failure:
-		if (rc == 0 && rc_tmp < 0)
-			rc = rc_tmp;
-	}
-
-	return rc;
-}
-
-/**
- * Add a new rule to the current filter
- * @param col the filter collection
- * @param strict the strict flag
- * @param action the filter action
- * @param syscall the syscall number
- * @param arg_cnt the number of argument filters in the argument filter chain
- * @param arg_array the argument filter chain, (uint, enum scmp_compare, ulong)
- *
- * This function adds a new argument/comparison/value to the seccomp filter for
- * a syscall; multiple arguments can be specified and they will be chained
- * together (essentially AND'd together) in the filter.  When the strict flag
- * is true the function will fail if the exact rule can not be added to the
- * filter, if the strict flag is false the function will not fail if the
- * function needs to adjust the rule due to architecture specifics.  Returns
- * zero on success, negative values on failure.
- *
- */
-int db_col_rule_add(struct db_filter_col *col,
-		    bool strict, uint32_t action, int syscall,
-		    unsigned int arg_cnt, const struct scmp_arg_cmp *arg_array)
-{
-	int rc = 0, rc_tmp;
-	unsigned int iter;
-	unsigned int chain_len;
-	unsigned int arg_num;
-	size_t chain_size;
-	struct db_api_arg *chain = NULL;
-	struct scmp_arg_cmp arg_data;
-
-	/* collect the arguments for the filter rule */
-	chain_len = ARG_COUNT_MAX;
-	chain_size = sizeof(*chain) * chain_len;
-	chain = malloc(chain_size);
-	if (chain == NULL)
-		return -ENOMEM;
-	memset(chain, 0, chain_size);
-	for (iter = 0; iter < arg_cnt; iter++) {
-		arg_data = arg_array[iter];
-		arg_num = arg_data.arg;
-		if (arg_num < chain_len && chain[arg_num].valid == 0) {
-			chain[arg_num].valid = 1;
-			chain[arg_num].arg = arg_num;
-			chain[arg_num].op = arg_data.op;
-			/* XXX - we should check datum/mask size against the
-			 *	 arch definition, e.g. 64 bit datum on x86 */
-			switch (chain[arg_num].op) {
-			case SCMP_CMP_NE:
-			case SCMP_CMP_LT:
-			case SCMP_CMP_LE:
-			case SCMP_CMP_EQ:
-			case SCMP_CMP_GE:
-			case SCMP_CMP_GT:
-				chain[arg_num].mask = DATUM_MAX;
-				chain[arg_num].datum = arg_data.datum_a;
-				break;
-			case SCMP_CMP_MASKED_EQ:
-				chain[arg_num].mask = arg_data.datum_a;
-				chain[arg_num].datum = arg_data.datum_b;
-				break;
-			default:
-				rc = -EINVAL;
-				goto add_return;
-			}
-		} else {
-			rc = -EINVAL;
-			goto add_return;
-		}
-	}
-
-	for (iter = 0; iter < col->filter_cnt; iter++) {
-		rc_tmp = arch_filter_rule_add(col, col->filters[iter], strict,
-					      action, syscall,
-					      chain_len, chain);
-		if (rc == 0 && rc_tmp < 0)
-			rc = rc_tmp;
-	}
-
-add_return:
-	if (chain != NULL)
-		free(chain);
-	return rc;
-}
-
-/**
- * Start a new seccomp filter transaction
- * @param col the filter collection
- *
- * This function starts a new seccomp filter transaction for the given filter
- * collection.  Returns zero on success, negative values on failure.
- *
- */
-int db_col_transaction_start(struct db_filter_col *col)
-{
-	unsigned int iter;
-	size_t args_size;
-	struct db_filter_snap *snap;
-	struct db_filter *filter_o, *filter_s;
-	struct db_api_rule_list *rule_o, *rule_s;
-
-	/* allocate the snapshot */
-	snap = malloc(sizeof(*snap));
-	if (snap == NULL)
-		return -ENOMEM;
-	snap->filters = malloc(sizeof(struct db_filter *) * col->filter_cnt);
-	if (snap->filters == NULL) {
-		free(snap);
-		return -ENOMEM;
-	}
-	snap->filter_cnt = col->filter_cnt;
-	for (iter = 0; iter < snap->filter_cnt; iter++)
-		snap->filters[iter] = NULL;
-	snap->next = NULL;
-
-	/* create a snapshot of the current filter state */
-	for (iter = 0; iter < col->filter_cnt; iter++) {
-		/* allocate a new filter */
-		filter_o = col->filters[iter];
-		filter_s = _db_init(filter_o->arch);
-		if (filter_s == NULL)
-			goto trans_start_failure;
-		snap->filters[iter] = filter_s;
-
-		/* create a filter snapshot from existing rules */
-		rule_o = filter_o->rules;
-		if (rule_o == NULL)
-			continue;
-		do {
-			/* copy the rule */
-			rule_s = malloc(sizeof(*rule_s));
-			if (rule_s == NULL)
-				goto trans_start_failure;
-			args_size = sizeof(*rule_s->args) * rule_o->args_cnt;
-			rule_s->args = malloc(args_size);
-			if (rule_s->args == NULL) {
-				free(rule_s);
-				goto trans_start_failure;
-			}
-			rule_s->action = rule_o->action;
-			rule_s->syscall = rule_o->syscall;
-			rule_s->args_cnt = rule_o->args_cnt;
-			memcpy(rule_s->args, rule_o->args, args_size);
-			if (filter_s->rules != NULL) {
-				rule_s->prev = filter_s->rules->prev;
-				rule_s->next = filter_s->rules;
-				filter_s->rules->prev->next = rule_s;
-				filter_s->rules->prev = rule_s;
-			} else {
-				rule_s->prev = rule_s;
-				rule_s->next = rule_s;
-				filter_s->rules = rule_s;
-			}
-
-			/* insert the rule into the filter */
-			if (db_rule_add(filter_s, rule_o) != 0)
-				goto trans_start_failure;
-
-			/* next rule */
-			rule_o = rule_o->next;
-		} while (rule_o != filter_o->rules);
-	}
-
-	/* add the snapshot to the list */
-	snap->next = col->snapshots;
-	col->snapshots = snap;
-
-	return 0;
-
-trans_start_failure:
-	_db_snap_release(snap);
-	return -ENOMEM;
-}
-
-/**
- * Abort the top most seccomp filter transaction
- * @param col the filter collection
- *
- * This function aborts the most recent seccomp filter transaction.
- *
- */
-void db_col_transaction_abort(struct db_filter_col *col)
-{
-	int iter;
-	unsigned int filter_cnt;
-	struct db_filter **filters;
-	struct db_filter_snap *snap;
-
-	if (col->snapshots == NULL)
-		return;
-
-	/* replace the current filter with the last snapshot */
-	snap = col->snapshots;
-	col->snapshots = snap->next;
-	filter_cnt = col->filter_cnt;
-	filters = col->filters;
-	col->filter_cnt = snap->filter_cnt;
-	col->filters = snap->filters;
-	free(snap);
-
-	/* free the filter we swapped out */
-	for (iter = 0; iter < filter_cnt; iter++)
-		_db_release(filters[iter]);
-	free(filters);
-}
-
-/**
- * Commit the top most seccomp filter transaction
- * @param col the filter collection
- *
- * This function commits the most recent seccomp filter transaction.
- *
- */
-void db_col_transaction_commit(struct db_filter_col *col)
-{
-	struct db_filter_snap *snap;
-
-	snap = col->snapshots;
-	col->snapshots = snap->next;
-	_db_snap_release(snap);
 }

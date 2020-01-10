@@ -2,7 +2,7 @@
 # Enhanced Seccomp Library pkg-config Configuration
 #
 # Copyright (c) 2012 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <paul@paul-moore.com>
+# Author: Paul Moore <pmoore@redhat.com>
 #
 
 #
@@ -19,14 +19,13 @@
 # along with this library; if not, see <http://www.gnu.org/licenses>.
 #
 
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-libdir=@libdir@
-includedir=@includedir@
+prefix=%%INSTALL_PREFIX%%
+libdir=%%INSTALL_LIBDIR%%
+includedir=${prefix}/include
 
 Name: libseccomp
 Description: The enhanced seccomp library
-URL: https://github.com/seccomp/libseccomp
-Version: @PACKAGE_VERSION@
+URL: http://libseccomp.sf.net
+Version: %%VERSION_RELEASE%%
 Cflags: -I${includedir}
 Libs: -L${libdir} -lseccomp

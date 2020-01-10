@@ -4,7 +4,7 @@
 # Seccomp Library test program
 #
 # Copyright (c) 2013 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <paul@paul-moore.com>
+# Author: Paul Moore <pmoore@redhat.com>
 #
 
 #
@@ -30,8 +30,9 @@ from seccomp import *
 
 def test(args):
     f = SyscallFilter(KILL)
-    f.remove_arch(Arch())
-    f.add_arch(Arch("x86"))
+    if not system_arch() == Arch.X86:
+        f.add_arch(Arch.X86)
+        f.remove_arch(Arch.NATIVE)
     f.add_rule(ALLOW, "tuxcall")
     try:
         f.add_rule_exactly(ALLOW, "tuxcall")

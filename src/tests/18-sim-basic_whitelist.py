@@ -4,7 +4,7 @@
 # Seccomp Library test program
 #
 # Copyright (c) 2013 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <paul@paul-moore.com>
+# Author: Paul Moore <pmoore@redhat.com>
 #
 
 #
@@ -30,11 +30,11 @@ from seccomp import *
 
 def test(args):
     f = SyscallFilter(ALLOW)
-    f.add_rule_exactly(KILL, "read", Arg(0, EQ, sys.stdin.fileno()))
-    f.add_rule_exactly(KILL, "write", Arg(0, EQ, sys.stdout.fileno()))
-    f.add_rule_exactly(KILL, "write", Arg(0, EQ, sys.stderr.fileno()))
-    f.add_rule_exactly(KILL, "close")
-    f.add_rule_exactly(KILL, "rt_sigreturn")
+    f.add_rule_exactly(KILL, "read", Arg(0, EQ, sys.stdin.fileno()));
+    f.add_rule_exactly(KILL, "write", Arg(0, EQ, sys.stdout.fileno()));
+    f.add_rule_exactly(KILL, "write", Arg(0, EQ, sys.stderr.fileno()));
+    f.add_rule_exactly(KILL, "close");
+    f.add_rule_exactly(KILL, "rt_sigreturn");
     return f
 
 args = util.get_opt()
