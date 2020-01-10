@@ -2,7 +2,7 @@
  * Seccomp Library test program
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -66,6 +66,9 @@ int main(int argc, char *argv[])
 	if (rc != 0)
 		goto out;
 	rc = seccomp_arch_add(ctx, seccomp_arch_resolve_name("mipsel64n32"));
+	if (rc != 0)
+		goto out;
+	rc = seccomp_arch_add(ctx, seccomp_arch_resolve_name("ppc64le"));
 	if (rc != 0)
 		goto out;
 

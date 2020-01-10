@@ -95,10 +95,11 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-check_PROGRAMS = 01-sim-allow$(EXEEXT) 02-sim-basic$(EXEEXT) \
-	03-sim-basic_chains$(EXEEXT) 04-sim-multilevel_chains$(EXEEXT) \
-	05-sim-long_jumps$(EXEEXT) 06-sim-actions$(EXEEXT) \
-	07-sim-db_bug_looping$(EXEEXT) 08-sim-subtree_checks$(EXEEXT) \
+check_PROGRAMS = miniseq$(EXEEXT) 01-sim-allow$(EXEEXT) \
+	02-sim-basic$(EXEEXT) 03-sim-basic_chains$(EXEEXT) \
+	04-sim-multilevel_chains$(EXEEXT) 05-sim-long_jumps$(EXEEXT) \
+	06-sim-actions$(EXEEXT) 07-sim-db_bug_looping$(EXEEXT) \
+	08-sim-subtree_checks$(EXEEXT) \
 	09-sim-syscall_priority_pre$(EXEEXT) \
 	10-sim-syscall_priority_post$(EXEEXT) \
 	11-basic-basic_errors$(EXEEXT) \
@@ -112,7 +113,10 @@ check_PROGRAMS = 01-sim-allow$(EXEEXT) 02-sim-basic$(EXEEXT) \
 	23-sim-arch_all_le_basic$(EXEEXT) 24-live-arg_allow$(EXEEXT) \
 	25-sim-multilevel_chains_adv$(EXEEXT) \
 	26-sim-arch_all_be_basic$(EXEEXT) \
-	27-sim-bpf_blk_state$(EXEEXT)
+	27-sim-bpf_blk_state$(EXEEXT) 28-sim-arch_x86$(EXEEXT) \
+	29-sim-pseudo_syscall$(EXEEXT) 30-sim-socket_syscalls$(EXEEXT) \
+	31-basic-version_check$(EXEEXT) 32-live-tsync_allow$(EXEEXT) \
+	33-sim-socket_syscalls_be$(EXEEXT)
 EXTRA_PROGRAMS = 00-test$(EXEEXT)
 subdir = tests
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -138,8 +142,8 @@ am__v_lt_1 =
 util_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(util_la_LDFLAGS) $(LDFLAGS) -o $@
-00_test_SOURCES = 00-test.c
-00_test_OBJECTS = 00-test.$(OBJEXT)
+nodist_00_test_OBJECTS = 00-test.$(OBJEXT)
+00_test_OBJECTS = $(nodist_00_test_OBJECTS)
 00_test_LDADD = $(LDADD)
 00_test_DEPENDENCIES = util.la ../src/libseccomp.la
 01_sim_allow_SOURCES = 01-sim-allow.c
@@ -257,6 +261,34 @@ util_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 27_sim_bpf_blk_state_OBJECTS = 27-sim-bpf_blk_state.$(OBJEXT)
 27_sim_bpf_blk_state_LDADD = $(LDADD)
 27_sim_bpf_blk_state_DEPENDENCIES = util.la ../src/libseccomp.la
+28_sim_arch_x86_SOURCES = 28-sim-arch_x86.c
+28_sim_arch_x86_OBJECTS = 28-sim-arch_x86.$(OBJEXT)
+28_sim_arch_x86_LDADD = $(LDADD)
+28_sim_arch_x86_DEPENDENCIES = util.la ../src/libseccomp.la
+29_sim_pseudo_syscall_SOURCES = 29-sim-pseudo_syscall.c
+29_sim_pseudo_syscall_OBJECTS = 29-sim-pseudo_syscall.$(OBJEXT)
+29_sim_pseudo_syscall_LDADD = $(LDADD)
+29_sim_pseudo_syscall_DEPENDENCIES = util.la ../src/libseccomp.la
+30_sim_socket_syscalls_SOURCES = 30-sim-socket_syscalls.c
+30_sim_socket_syscalls_OBJECTS = 30-sim-socket_syscalls.$(OBJEXT)
+30_sim_socket_syscalls_LDADD = $(LDADD)
+30_sim_socket_syscalls_DEPENDENCIES = util.la ../src/libseccomp.la
+31_basic_version_check_SOURCES = 31-basic-version_check.c
+31_basic_version_check_OBJECTS = 31-basic-version_check.$(OBJEXT)
+31_basic_version_check_LDADD = $(LDADD)
+31_basic_version_check_DEPENDENCIES = util.la ../src/libseccomp.la
+32_live_tsync_allow_SOURCES = 32-live-tsync_allow.c
+32_live_tsync_allow_OBJECTS = 32-live-tsync_allow.$(OBJEXT)
+32_live_tsync_allow_LDADD = $(LDADD)
+32_live_tsync_allow_DEPENDENCIES = util.la ../src/libseccomp.la
+33_sim_socket_syscalls_be_SOURCES = 33-sim-socket_syscalls_be.c
+33_sim_socket_syscalls_be_OBJECTS =  \
+	33-sim-socket_syscalls_be.$(OBJEXT)
+33_sim_socket_syscalls_be_LDADD = $(LDADD)
+33_sim_socket_syscalls_be_DEPENDENCIES = util.la ../src/libseccomp.la
+miniseq_SOURCES = miniseq.c
+miniseq_OBJECTS = miniseq.$(OBJEXT)
+miniseq_DEPENDENCIES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -291,19 +323,7 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(util_la_SOURCES) 00-test.c 01-sim-allow.c 02-sim-basic.c \
-	03-sim-basic_chains.c 04-sim-multilevel_chains.c \
-	05-sim-long_jumps.c 06-sim-actions.c 07-sim-db_bug_looping.c \
-	08-sim-subtree_checks.c 09-sim-syscall_priority_pre.c \
-	10-sim-syscall_priority_post.c 11-basic-basic_errors.c \
-	12-sim-basic_masked_ops.c 13-basic-attrs.c 14-sim-reset.c \
-	15-basic-resolver.c 16-sim-arch_basic.c 17-sim-arch_merge.c \
-	18-sim-basic_whitelist.c 19-sim-missing_syscalls.c \
-	20-live-basic_die.c 21-live-basic_allow.c \
-	22-sim-basic_chains_array.c 23-sim-arch_all_le_basic.c \
-	24-live-arg_allow.c 25-sim-multilevel_chains_adv.c \
-	26-sim-arch_all_be_basic.c 27-sim-bpf_blk_state.c
-DIST_SOURCES = $(util_la_SOURCES) 00-test.c 01-sim-allow.c \
+SOURCES = $(util_la_SOURCES) $(nodist_00_test_SOURCES) 01-sim-allow.c \
 	02-sim-basic.c 03-sim-basic_chains.c \
 	04-sim-multilevel_chains.c 05-sim-long_jumps.c \
 	06-sim-actions.c 07-sim-db_bug_looping.c \
@@ -315,7 +335,25 @@ DIST_SOURCES = $(util_la_SOURCES) 00-test.c 01-sim-allow.c \
 	20-live-basic_die.c 21-live-basic_allow.c \
 	22-sim-basic_chains_array.c 23-sim-arch_all_le_basic.c \
 	24-live-arg_allow.c 25-sim-multilevel_chains_adv.c \
-	26-sim-arch_all_be_basic.c 27-sim-bpf_blk_state.c
+	26-sim-arch_all_be_basic.c 27-sim-bpf_blk_state.c \
+	28-sim-arch_x86.c 29-sim-pseudo_syscall.c \
+	30-sim-socket_syscalls.c 31-basic-version_check.c \
+	32-live-tsync_allow.c 33-sim-socket_syscalls_be.c miniseq.c
+DIST_SOURCES = $(util_la_SOURCES) 01-sim-allow.c 02-sim-basic.c \
+	03-sim-basic_chains.c 04-sim-multilevel_chains.c \
+	05-sim-long_jumps.c 06-sim-actions.c 07-sim-db_bug_looping.c \
+	08-sim-subtree_checks.c 09-sim-syscall_priority_pre.c \
+	10-sim-syscall_priority_post.c 11-basic-basic_errors.c \
+	12-sim-basic_masked_ops.c 13-basic-attrs.c 14-sim-reset.c \
+	15-basic-resolver.c 16-sim-arch_basic.c 17-sim-arch_merge.c \
+	18-sim-basic_whitelist.c 19-sim-missing_syscalls.c \
+	20-live-basic_die.c 21-live-basic_allow.c \
+	22-sim-basic_chains_array.c 23-sim-arch_all_le_basic.c \
+	24-live-arg_allow.c 25-sim-multilevel_chains_adv.c \
+	26-sim-arch_all_be_basic.c 27-sim-bpf_blk_state.c \
+	28-sim-arch_x86.c 29-sim-pseudo_syscall.c \
+	30-sim-socket_syscalls.c 31-basic-version_check.c \
+	32-live-tsync_allow.c 33-sim-socket_syscalls_be.c miniseq.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -490,6 +528,7 @@ LDADD = util.la ../src/libseccomp.la
 check_LTLIBRARIES = util.la
 util_la_SOURCES = util.c util.h
 util_la_LDFLAGS = -module
+miniseq_LDADD = 
 TESTS = regression
 EXTRA_DIST_TESTPYTHON = \
 	util.py \
@@ -518,7 +557,14 @@ EXTRA_DIST_TESTPYTHON = \
 	23-sim-arch_all_le_basic.py \
 	24-live-arg_allow.py \
 	25-sim-multilevel_chains_adv.py \
-	26-sim-arch_all_be_basic.py
+	26-sim-arch_all_be_basic.py \
+	27-sim-bpf_blk_state.py \
+	28-sim-arch_x86.py \
+	29-sim-pseudo_syscall.py \
+	30-sim-socket_syscalls.py \
+	31-basic-version_check.py \
+	32-live-tsync_allow.py \
+	33-sim-socket_syscalls_be.py
 
 EXTRA_DIST_TESTCFGS = \
 	01-sim-allow.tests \
@@ -546,7 +592,14 @@ EXTRA_DIST_TESTCFGS = \
 	23-sim-arch_all_le_basic.tests \
 	24-live-arg_allow.tests \
 	25-sim-multilevel_chains_adv.tests \
-	26-sim-arch_all_be_basic.tests
+	26-sim-arch_all_be_basic.tests \
+	27-sim-bpf_blk_state.tests \
+	28-sim-arch_x86.tests \
+	29-sim-pseudo_syscall.tests \
+	30-sim-socket_syscalls.tests \
+	31-basic-version_check.tests \
+	32-live-tsync_allow.tests \
+	33-sim-socket_syscalls_be.tests
 
 EXTRA_DIST_TESTSCRIPTS = regression testdiff testgen
 EXTRA_DIST_TESTVALGRIND = valgrind_test.supp
@@ -556,6 +609,7 @@ EXTRA_DIST = \
 	${EXTRA_DIST_TESTSCRIPTS} \
 	${EXTRA_DIST_TESTVALGRIND}
 
+nodist_00_test_SOURCES = 00-test.c
 all: all-am
 
 .SUFFIXES:
@@ -726,6 +780,34 @@ clean-checkPROGRAMS:
 	@rm -f 27-sim-bpf_blk_state$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(27_sim_bpf_blk_state_OBJECTS) $(27_sim_bpf_blk_state_LDADD) $(LIBS)
 
+28-sim-arch_x86$(EXEEXT): $(28_sim_arch_x86_OBJECTS) $(28_sim_arch_x86_DEPENDENCIES) $(EXTRA_28_sim_arch_x86_DEPENDENCIES) 
+	@rm -f 28-sim-arch_x86$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(28_sim_arch_x86_OBJECTS) $(28_sim_arch_x86_LDADD) $(LIBS)
+
+29-sim-pseudo_syscall$(EXEEXT): $(29_sim_pseudo_syscall_OBJECTS) $(29_sim_pseudo_syscall_DEPENDENCIES) $(EXTRA_29_sim_pseudo_syscall_DEPENDENCIES) 
+	@rm -f 29-sim-pseudo_syscall$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(29_sim_pseudo_syscall_OBJECTS) $(29_sim_pseudo_syscall_LDADD) $(LIBS)
+
+30-sim-socket_syscalls$(EXEEXT): $(30_sim_socket_syscalls_OBJECTS) $(30_sim_socket_syscalls_DEPENDENCIES) $(EXTRA_30_sim_socket_syscalls_DEPENDENCIES) 
+	@rm -f 30-sim-socket_syscalls$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(30_sim_socket_syscalls_OBJECTS) $(30_sim_socket_syscalls_LDADD) $(LIBS)
+
+31-basic-version_check$(EXEEXT): $(31_basic_version_check_OBJECTS) $(31_basic_version_check_DEPENDENCIES) $(EXTRA_31_basic_version_check_DEPENDENCIES) 
+	@rm -f 31-basic-version_check$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(31_basic_version_check_OBJECTS) $(31_basic_version_check_LDADD) $(LIBS)
+
+32-live-tsync_allow$(EXEEXT): $(32_live_tsync_allow_OBJECTS) $(32_live_tsync_allow_DEPENDENCIES) $(EXTRA_32_live_tsync_allow_DEPENDENCIES) 
+	@rm -f 32-live-tsync_allow$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(32_live_tsync_allow_OBJECTS) $(32_live_tsync_allow_LDADD) $(LIBS)
+
+33-sim-socket_syscalls_be$(EXEEXT): $(33_sim_socket_syscalls_be_OBJECTS) $(33_sim_socket_syscalls_be_DEPENDENCIES) $(EXTRA_33_sim_socket_syscalls_be_DEPENDENCIES) 
+	@rm -f 33-sim-socket_syscalls_be$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(33_sim_socket_syscalls_be_OBJECTS) $(33_sim_socket_syscalls_be_LDADD) $(LIBS)
+
+miniseq$(EXEEXT): $(miniseq_OBJECTS) $(miniseq_DEPENDENCIES) $(EXTRA_miniseq_DEPENDENCIES) 
+	@rm -f miniseq$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(miniseq_OBJECTS) $(miniseq_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -760,6 +842,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/25-sim-multilevel_chains_adv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/26-sim-arch_all_be_basic.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/27-sim-bpf_blk_state.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/28-sim-arch_x86.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/29-sim-pseudo_syscall.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/30-sim-socket_syscalls.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/31-basic-version_check.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/32-live-tsync_allow.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/33-sim-socket_syscalls_be.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/miniseq.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@
 
 .c.o:

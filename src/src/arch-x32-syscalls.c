@@ -2,7 +2,7 @@
  * Enhanced Seccomp x32 Syscall Table
  *
  * Copyright (c) 2013 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -26,7 +26,7 @@
 #include "arch.h"
 #include "arch-x32.h"
 
-/* NOTE: based on Linux 3.19 */
+/* NOTE: based on Linux 4.5-rc4 */
 const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "_llseek", __PNR__llseek },
 	{ "_newselect", __PNR__newselect },
@@ -65,6 +65,7 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "clone", (X32_SYSCALL_BIT + 56) },
 	{ "close", (X32_SYSCALL_BIT + 3) },
 	{ "connect", (X32_SYSCALL_BIT + 42) },
+	{ "copy_file_range", (X32_SYSCALL_BIT + 326) },
 	{ "creat", (X32_SYSCALL_BIT + 85) },
 	{ "create_module", __PNR_create_module },
 	{ "delete_module", (X32_SYSCALL_BIT + 176) },
@@ -196,6 +197,7 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "lstat64", __PNR_lstat64 },
 	{ "madvise", (X32_SYSCALL_BIT + 28) },
 	{ "mbind", (X32_SYSCALL_BIT + 237) },
+	{ "membarrier",  (X32_SYSCALL_BIT + 324) },
 	{ "memfd_create", (X32_SYSCALL_BIT + 319) },
 	{ "migrate_pages", (X32_SYSCALL_BIT + 256) },
 	{ "mincore", (X32_SYSCALL_BIT + 27) },
@@ -204,6 +206,7 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "mknod", (X32_SYSCALL_BIT + 133) },
 	{ "mknodat", (X32_SYSCALL_BIT + 259) },
 	{ "mlock", (X32_SYSCALL_BIT + 149) },
+	{ "mlock2", (X32_SYSCALL_BIT + 325) },
 	{ "mlockall", (X32_SYSCALL_BIT + 151) },
 	{ "mmap", (X32_SYSCALL_BIT + 9) },
 	{ "mmap2", __PNR_mmap2 },
@@ -224,6 +227,7 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "msgrcv", (X32_SYSCALL_BIT + 70) },
 	{ "msgsnd", (X32_SYSCALL_BIT + 69) },
 	{ "msync", (X32_SYSCALL_BIT + 26) },
+	{ "multiplexer", __PNR_multiplexer },
 	{ "munlock", (X32_SYSCALL_BIT + 150) },
 	{ "munlockall", (X32_SYSCALL_BIT + 152) },
 	{ "munmap", (X32_SYSCALL_BIT + 11) },
@@ -294,6 +298,10 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "rt_sigsuspend", (X32_SYSCALL_BIT + 130) },
 	{ "rt_sigtimedwait", (X32_SYSCALL_BIT + 523) },
 	{ "rt_tgsigqueueinfo", (X32_SYSCALL_BIT + 536) },
+	{ "rtas", __PNR_rtas },
+	{ "s390_pci_mmio_read", __PNR_s390_pci_mmio_read },
+	{ "s390_pci_mmio_write", __PNR_s390_pci_mmio_write },
+	{ "s390_runtime_instr", __PNR_s390_runtime_instr },
 	{ "sched_get_priority_max", (X32_SYSCALL_BIT + 146) },
 	{ "sched_get_priority_min", (X32_SYSCALL_BIT + 147) },
 	{ "sched_getaffinity", (X32_SYSCALL_BIT + 204) },
@@ -372,6 +380,8 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "socketcall", __PNR_socketcall },
 	{ "socketpair", (X32_SYSCALL_BIT + 53) },
 	{ "splice", (X32_SYSCALL_BIT + 275) },
+	{ "spu_create", __PNR_spu_create },
+	{ "spu_run", __PNR_spu_run },
 	{ "ssetmask", __PNR_ssetmask },
 	{ "stat", (X32_SYSCALL_BIT + 4) },
 	{ "stat64", __PNR_stat64 },
@@ -379,8 +389,11 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "statfs64", __PNR_statfs64 },
 	{ "stime", __PNR_stime },
 	{ "stty", __PNR_stty },
+	{ "subpage_prot", __PNR_subpage_prot },
+	{ "swapcontext", __PNR_swapcontext },
 	{ "swapoff", (X32_SYSCALL_BIT + 168) },
 	{ "swapon", (X32_SYSCALL_BIT + 167) },
+	{ "switch_endian", __PNR_switch_endian },
 	{ "symlink", (X32_SYSCALL_BIT + 88) },
 	{ "symlinkat", (X32_SYSCALL_BIT + 266) },
 	{ "sync", (X32_SYSCALL_BIT + 162) },
@@ -388,6 +401,7 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "sync_file_range2", __PNR_sync_file_range2 },
 	{ "syncfs", (X32_SYSCALL_BIT + 306) },
 	{ "syscall", __PNR_syscall },
+	{ "sys_debug_setcontext", __PNR_sys_debug_setcontext },
 	{ "sysfs", (X32_SYSCALL_BIT + 139) },
 	{ "sysinfo", (X32_SYSCALL_BIT + 99) },
 	{ "syslog", (X32_SYSCALL_BIT + 103) },
@@ -419,6 +433,7 @@ const struct arch_syscall_def x32_syscall_table[] = { \
 	{ "unlinkat", (X32_SYSCALL_BIT + 263) },
 	{ "unshare", (X32_SYSCALL_BIT + 272) },
 	{ "uselib", __PNR_uselib },
+	{ "userfaultfd", (X32_SYSCALL_BIT + 323) },
 	{ "usr26", __PNR_usr26 },
 	{ "usr32", __PNR_usr32 },
 	{ "ustat", (X32_SYSCALL_BIT + 136) },

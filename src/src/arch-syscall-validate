@@ -4,7 +4,7 @@
 # libseccomp syscall validation script
 #
 # Copyright (c) 2014 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <pmoore@redhat.com>
+# Author: Paul Moore <paul@paul-moore.com>
 #
 
 #
@@ -63,7 +63,28 @@ libseccomp syscall validation script
 optional arguments:
   -h             show this help message and exit
   -a             architecture
+  -l             output the library's syscall definitions
+  -s             output the system's syscall definitions
 EOF
+}
+
+#
+# Dump the library syscall table for a given architecture
+#
+# Arguments:
+#     1    architecture
+#     2    offset (optional)
+#
+#
+#  Dump the library's syscall table to stdout.
+#
+function dump_lib_arch() {
+	local offset_str=""
+
+	[[ -z $1 ]] && return
+
+	[[ -n $2 ]] && offset_str="-o $2"
+	$LIB_SYS_DUMP -a $1 $offset_str | sed -e '/[^\t]\+\t-[0-9]\+/d'
 }
 
 #
@@ -75,7 +96,7 @@ EOF
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_x86() {
-	cat $1/arch/x86/syscalls/syscall_32.tbl | \
+	cat $1/arch/x86/entry/syscalls/syscall_32.tbl | \
 		grep -v "^#" | awk '{ print $3"\t"$1 }' | sed '/^[ \t]*$/d' | \
 		sort
 }
@@ -86,7 +107,7 @@ function dump_sys_x86() {
 #  Dump the library's syscall table to stdout.
 #
 function dump_lib_x86() {
-	$LIB_SYS_DUMP -a x86 | sed -e '/[^\t]\+\t-[0-9]\+/d'
+	dump_lib_arch x86
 }
 
 #
@@ -98,7 +119,7 @@ function dump_lib_x86() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_x86_64() {
-	cat $1/arch/x86/syscalls/syscall_64.tbl | \
+	cat $1/arch/x86/entry/syscalls/syscall_64.tbl | \
 		grep -v "^#" | awk '{ print $2,$3,$1 }' | sed -e '/^x32/d' | \
 		awk '{ print $2"\t"$3 }' | sed '/^[ \t]*$/d' | sort
 }
@@ -109,7 +130,7 @@ function dump_sys_x86_64() {
 #  Dump the library's syscall table to stdout.
 #
 function dump_lib_x86_64() {
-	$LIB_SYS_DUMP -a x86_64 | sed -e '/[^\t]\+\t-[0-9]\+/d'
+	dump_lib_arch x86_64
 }
 
 #
@@ -121,7 +142,7 @@ function dump_lib_x86_64() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_x32() {
-	cat $1/arch/x86/syscalls/syscall_64.tbl | \
+	cat $1/arch/x86/entry/syscalls/syscall_64.tbl | \
 		grep -v "^#" | awk '{ print $2,$3,$1 }' | sed -e '/^64/d' | \
 		awk '{ print $2"\t"$3 }' | sed '/^[ \t]*$/d' | sort
 }
@@ -133,7 +154,7 @@ function dump_sys_x32() {
 #
 function dump_lib_x32() {
 	# 1073741824 == 0x40000000
-	$LIB_SYS_DUMP -a x32 -o 1073741824 | sed -e '/[^\t]\+\t-[0-9]\+/d'
+	dump_lib_arch x32 1073741824
 }
 
 #
@@ -159,7 +180,6 @@ function dump_sys_arm() {
 				echo "$line"; \
 			fi; \
 		done | \
-		cat - | \
 		sed -e '/#define __NR_sync_file_range2[ \t]\+__NR_arm_sync_file_range/d' | \
 		sort
 }
@@ -171,8 +191,7 @@ function dump_sys_arm() {
 #
 function dump_lib_arm() {
 	# NOTE: arm_sync_file_range() and sync_file_range2() share values
-	$LIB_SYS_DUMP -a arm | sed -e '/[^\t]\+\t-[0-9]\+/d' | \
-		sed -e '/sync_file_range2[ \t]\+341/d'
+	dump_lib_arch arm | sed -e '/sync_file_range2[ \t]\+341/d'
 }
 
 #
@@ -211,7 +230,7 @@ function dump_sys_aarch64() {
 #  Dump the library's syscall table to stdout.
 #
 function dump_lib_aarch64() {
-	$LIB_SYS_DUMP -a aarch64 | sed -e '/[^\t]\+\t-[0-9]\+/d'
+	dump_lib_arch aarch64
 }
 
 #
@@ -245,7 +264,7 @@ function dump_sys_mips() {
 #  Dump the library's syscall table to stdout.
 #
 function dump_lib_mips() {
-	$LIB_SYS_DUMP -a mips -o 4000 | sed -e '/[^\t]\+\t-[0-9]\+/d'
+	dump_lib_arch mips 4000
 }
 
 #
@@ -279,7 +298,7 @@ function dump_sys_mips64() {
 #  Dump the library's syscall table to stdout.
 #
 function dump_lib_mips64() {
-	$LIB_SYS_DUMP -a mips64 -o 5000 | sed -e '/[^\t]\+\t-[0-9]\+/d'
+	dump_lib_arch mips64 5000
 }
 
 #
@@ -313,7 +332,115 @@ function dump_sys_mips64n32() {
 #  Dump the library's syscall table to stdout.
 #
 function dump_lib_mips64n32() {
-	$LIB_SYS_DUMP -a mips64n32 -o 6000 | sed -e '/[^\t]\+\t-[0-9]\+/d'
+	dump_lib_arch mips64n32 6000
+}
+
+#
+# Dump the ppc system syscall table
+#
+# Arguments:
+#     1    path to the kernel source
+#
+#  Dump the architecture's syscall table to stdout.
+#
+function dump_sys_ppc() {
+	gcc -E -dM $1/arch/powerpc/include/uapi/asm/unistd.h | \
+		grep "^#define __NR_" | \
+		sed -e 's/#define[ \t]\+__NR_\([a-z0-9_]\+\)[ \t]\+\([0-9]\+\)/\1\t\2/' | \
+		sort
+}
+
+#
+# Dump the ppc library syscall table
+#
+#  Dump the library's syscall table to stdout.
+#
+function dump_lib_ppc() {
+	dump_lib_arch ppc
+}
+
+#
+# Dump the ppc64 system syscall table
+#
+# Arguments:
+#     1    path to the kernel source
+#
+#  Dump the architecture's syscall table to stdout.
+#
+function dump_sys_ppc64() {
+	gcc -E -dM -D__powerpc64__ $1/arch/powerpc/include/uapi/asm/unistd.h | \
+		grep "^#define __NR_" | \
+		sed -e 's/#define[ \t]\+__NR_\([a-z0-9_]\+\)[ \t]\+\([0-9]\+\)/\1\t\2/' | \
+		sort
+}
+
+#
+# Dump the ppc64 library syscall table
+#
+#  Dump the library's syscall table to stdout.
+#
+function dump_lib_ppc64() {
+	dump_lib_arch ppc64
+}
+
+#
+# Dump the s390 system syscall table
+#
+# Arguments:
+#     1    path to the kernel source
+#
+#  Dump the architecture's syscall table to stdout.
+#
+function dump_sys_s390() {
+	gcc -E -dM $1/arch/s390/include/uapi/asm/unistd.h | grep __NR | \
+		sed -e 's/#define[ \t]\+__NR_\([^ \t]\+\)[ \t]\+(__NR_timer_create[ \t]*+[ \t]*\([0-9]\+\)).*/\1\t254 + \2/' | \
+		while read line; do \
+			if echo "$line" | grep -q "+"; then \
+				echo "$line" | awk '{ print $1"\t"$2+$4 }'; \
+			else \
+				echo "$line"; \
+			fi; \
+		done | \
+		sed 's/#define __NR_//g' | sed 's/ /\t/g' | sort
+}
+
+#
+# Dump the s390 library syscall table
+#
+#  Dump the library's syscall table to stdout.
+#
+function dump_lib_s390() {
+	dump_lib_arch s390
+}
+
+#
+# Dump the s390x system syscall table
+#
+# Arguments:
+#     1    path to the kernel source
+#
+#  Dump the architecture's syscall table to stdout.
+#
+function dump_sys_s390x() {
+	gcc -E -dM -D __s390x__ $1/arch/s390/include/uapi/asm/unistd.h | grep __NR | \
+		sed -e 's/#define[ \t]\+__NR_\([^ \t]\+\)[ \t]\+(__NR_timer_create[ \t]*+[ \t]*\([0-9]\+\)).*/\1\t254 + \2/' | \
+		while read line; do \
+			if echo "$line" | grep -q "+"; then \
+				echo "$line" | awk '{ print $1"\t"$2+$4 }'; \
+			else \
+				echo "$line"; \
+			fi; \
+		done | \
+		sed 's/#define __NR_//g' | sed 's/ /\t/g' | sort
+}
+
+#
+# Dump the s390x library syscall table
+#
+#  Dump the library's syscall table to stdout.
+#
+function dump_lib_s390x() {
+	dump_lib_arch s390x
 }
 
 #
@@ -351,10 +478,25 @@ function dump_sys() {
 	mips64n32)
 		dump_sys_mips64n32 "$2"
 		;;
+	ppc)
+		dump_sys_ppc "$2"
+		;;
+	ppc64)
+		dump_sys_ppc64 "$2"
+		;;
+	s390)
+		dump_sys_s390 "$2"
+		;;
+	s390x)
+		dump_sys_s390x "$2"
+		;;
 	*)
 		echo ""
+		return 1
 		;;
 	esac
+
+	return 0
 }
 
 #
@@ -368,33 +510,48 @@ function dump_sys() {
 function dump_lib() {
 	case $1 in
 	x86)
-		dump_lib_x86 "$2"
+		dump_lib_x86
 		;;
 	x86_64)
-		dump_lib_x86_64 "$2"
+		dump_lib_x86_64
 		;;
 	x32)
-		dump_lib_x32 "$2"
+		dump_lib_x32
 		;;
 	arm)
-		dump_lib_arm "$2"
+		dump_lib_arm
 		;;
 	aarch64)
-		dump_lib_aarch64 "$2"
+		dump_lib_aarch64
 		;;
 	mips)
-		dump_lib_mips "$2"
+		dump_lib_mips
 		;;
 	mips64)
-		dump_lib_mips64 "$2"
+		dump_lib_mips64
 		;;
 	mips64n32)
-		dump_lib_mips64n32 "$2"
+		dump_lib_mips64n32
+		;;
+	ppc)
+		dump_lib_ppc "$2"
+		;;
+	ppc64)
+		dump_lib_ppc64 "$2"
+		;;
+	s390)
+		dump_lib_s390 "$2"
+		;;
+	s390x)
+		dump_lib_s390x "$2"
 		;;
 	*)
 		echo ""
+		return 1
 		;;
 	esac
+
+	return 0
 }
 
 ####
@@ -410,12 +567,22 @@ if [[ ! -x $LIB_SYS_DUMP ]]; then
 	exit 1
 fi
 
-arches=""
+opt_arches=""
+opt_sys=""
+opt_lib=""
 
-while getopts "a:h" opt; do
+while getopts "a:slh" opt; do
 	case $opt in
 	a)
-		arches+="$OPTARG "
+		opt_arches+="$OPTARG "
+		;;
+	s)
+		opt_sys=1
+		opt_lib=0
+		;;
+	l)
+		opt_sys=0
+		opt_lib=1
 		;;
 	h|*)
 		usage
@@ -426,8 +593,13 @@ done
 shift $(($OPTIND - 1))
 
 # defaults
-if [[ $arches == "" ]]; then
-	arches="x86 x86_64 x32 arm aarch64 mips mips64 mips64n32"
+if [[ $opt_arches == "" ]]; then
+	opt_arches=" \
+		x86 x86_64 x32 \
+		arm aarch64 \
+		mips mips64 mips64n32 \
+		ppc ppc64 \
+		s390 s390x"
 fi
 
 # sanity checks
@@ -442,20 +614,35 @@ if [[ ! -d $kernel_dir ]]; then
 fi
 
 # generate some temp files
-tmp_orig=$(mktemp -t syscall_validate_XXXXXX)
-tmp_new=$(mktemp -t syscall_validate_XXXXXX)
+tmp_lib=$(mktemp -t syscall_validate_XXXXXX)
+tmp_sys=$(mktemp -t syscall_validate_XXXXXX)
 
-# loop through the architectures
-for i in $arches; do
+# loop through the architectures and compare
+for i in $opt_arches; do
 	# dump the syscall tables
-	dump_lib $i > $tmp_orig
-	dump_sys $i "$kernel_dir" > $tmp_new
+	dump_lib $i > $tmp_lib
+	if [[ $? -ne 0 ]]; then
+		echo "error: unknown arch $i"
+		exit 1
+	fi
+	dump_sys $i "$kernel_dir" > $tmp_sys
+	if [[ $? -ne 0 ]]; then
+		echo "error: unknown arch $i"
+		exit 1
+	fi
 
-	# do the comparison
-	diff -u --label="$i [library]" $tmp_orig --label "$i [system]" $tmp_new
+	if [[ $opt_lib -eq 1 ]]; then
+		cat $tmp_lib
+	elif [[ $opt_sys -eq 1 ]]; then
+		cat $tmp_sys
+	else
+		#  compare the lib and sys output
+		diff -u --label="$i [library]" $tmp_lib \
+			--label "$i [system]" $tmp_sys
+	fi
 done
 
 # cleanup and exit
-rm -f $tmp_orig $tmp_new
+rm -f $tmp_lib $tmp_sys
 
 exit 0

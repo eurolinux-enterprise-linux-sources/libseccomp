@@ -23,9 +23,12 @@ check_LTLIBRARIES = util.la
 util_la_SOURCES = util.c util.h
 util_la_LDFLAGS = -module
 
+miniseq_LDADD =
+
 TESTS = regression
 
 check_PROGRAMS = \
+	miniseq \
 	01-sim-allow \
 	02-sim-basic \
 	03-sim-basic_chains \
@@ -52,7 +55,13 @@ check_PROGRAMS = \
 	24-live-arg_allow \
 	25-sim-multilevel_chains_adv \
 	26-sim-arch_all_be_basic \
-	27-sim-bpf_blk_state
+	27-sim-bpf_blk_state \
+	28-sim-arch_x86 \
+	29-sim-pseudo_syscall \
+	30-sim-socket_syscalls \
+	31-basic-version_check \
+	32-live-tsync_allow \
+	33-sim-socket_syscalls_be
 
 EXTRA_DIST_TESTPYTHON = \
 	util.py \
@@ -81,7 +90,14 @@ EXTRA_DIST_TESTPYTHON = \
 	23-sim-arch_all_le_basic.py \
 	24-live-arg_allow.py \
 	25-sim-multilevel_chains_adv.py \
-	26-sim-arch_all_be_basic.py
+	26-sim-arch_all_be_basic.py \
+	27-sim-bpf_blk_state.py \
+	28-sim-arch_x86.py \
+	29-sim-pseudo_syscall.py \
+	30-sim-socket_syscalls.py \
+	31-basic-version_check.py \
+	32-live-tsync_allow.py \
+	33-sim-socket_syscalls_be.py
 
 EXTRA_DIST_TESTCFGS = \
 	01-sim-allow.tests \
@@ -109,7 +125,14 @@ EXTRA_DIST_TESTCFGS = \
 	23-sim-arch_all_le_basic.tests \
 	24-live-arg_allow.tests \
 	25-sim-multilevel_chains_adv.tests \
-	26-sim-arch_all_be_basic.tests
+	26-sim-arch_all_be_basic.tests \
+	27-sim-bpf_blk_state.tests \
+	28-sim-arch_x86.tests \
+	29-sim-pseudo_syscall.tests \
+	30-sim-socket_syscalls.tests \
+	31-basic-version_check.tests \
+	32-live-tsync_allow.tests \
+	33-sim-socket_syscalls_be.tests
 
 EXTRA_DIST_TESTSCRIPTS = regression testdiff testgen
 
@@ -121,6 +144,7 @@ EXTRA_DIST = \
 	${EXTRA_DIST_TESTSCRIPTS} \
 	${EXTRA_DIST_TESTVALGRIND}
 
+nodist_00_test_SOURCES = 00-test.c
 EXTRA_PROGRAMS = 00-test
 
 check-build:

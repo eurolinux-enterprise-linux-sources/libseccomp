@@ -21,7 +21,11 @@ if ENABLE_PYTHON
 SUBDIRS += python
 endif
 
-SOURCES_ARCH = \
+SOURCES_ALL = \
+	api.c system.h system.c \
+	gen_pfc.h gen_pfc.c gen_bpf.h gen_bpf.c \
+	hash.h hash.c \
+	db.h db.c \
 	arch.c arch.h \
 	arch-x86.h arch-x86.c arch-x86-syscalls.c \
 	arch-x86_64.h arch-x86_64.c arch-x86_64-syscalls.c \
@@ -30,13 +34,11 @@ SOURCES_ARCH = \
 	arch-aarch64.h arch-aarch64.c arch-aarch64-syscalls.c \
 	arch-mips.h arch-mips.c arch-mips-syscalls.c \
 	arch-mips64.h arch-mips64.c arch-mips64-syscalls.c \
-	arch-mips64n32.h arch-mips64n32.c arch-mips64n32-syscalls.c
-
-SOURCES_GEN = \
-	api.c system.h system.c \
-	db.h db.c \
-	hash.h hash.c \
-	gen_pfc.h gen_pfc.c gen_bpf.h gen_bpf.c
+	arch-mips64n32.h arch-mips64n32.c arch-mips64n32-syscalls.c \
+	arch-ppc.h arch-ppc.c arch-ppc-syscalls.c \
+	arch-ppc64.h arch-ppc64.c arch-ppc64-syscalls.c \
+	arch-s390.h arch-s390.c arch-s390-syscalls.c \
+	arch-s390x.h arch-s390x.c arch-s390x-syscalls.c
 
 EXTRA_DIST = arch-syscall-validate
 
@@ -46,11 +48,12 @@ check_PROGRAMS = arch-syscall-check arch-syscall-dump
 
 lib_LTLIBRARIES = libseccomp.la
 
-arch_syscall_dump_SOURCES = arch-syscall-dump.c ${SOURCES_ARCH}
+arch_syscall_dump_SOURCES = arch-syscall-dump.c ${SOURCES_ALL}
 
-arch_syscall_check_SOURCES = arch-syscall-check.c ${SOURCES_ARCH}
+arch_syscall_check_SOURCES = arch-syscall-check.c ${SOURCES_ALL}
 
-libseccomp_la_SOURCES = ${SOURCES_GEN} ${SOURCES_ARCH}
+libseccomp_la_SOURCES = ${SOURCES_ALL}
+libseccomp_la_CPPFLAGS = ${AM_CPPFLAGS} -I${top_builddir}/include
 libseccomp_la_CFLAGS = ${AM_CFLAGS} ${CFLAGS} -fPIC -DPIC -fvisibility=hidden
 libseccomp_la_LDFLAGS = ${AM_LDFLAGS} ${LDFLAGS} \
 	-version-number ${VERSION_MAJOR}:${VERSION_MINOR}:${VERSION_MICRO}

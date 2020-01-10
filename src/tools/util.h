@@ -2,7 +2,7 @@
  * Tool utility functions
  *
  * Copyright (c) 2014 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -63,9 +63,16 @@
 				 __AUDIT_ARCH_CONVENTION_MIPS64_N32)
 #endif
 
-extern uint32_t arch;
+#ifndef AUDIT_ARCH_AARCH64
+/* AArch64 support for audit was merged in 3.17-rc1 */
+#define AUDIT_ARCH_AARCH64	(EM_AARCH64|__AUDIT_ARCH_64BIT|__AUDIT_ARCH_LE)
+#endif
 
-void exit_usage(const char *program);
+#ifndef AUDIT_ARCH_PPC64LE
+#define AUDIT_ARCH_PPC64LE	(EM_PPC64|__AUDIT_ARCH_64BIT|__AUDIT_ARCH_LE)
+#endif
+
+extern uint32_t arch;
 
 uint16_t ttoh16(uint32_t arch, uint16_t val);
 uint32_t ttoh32(uint32_t arch, uint32_t val);

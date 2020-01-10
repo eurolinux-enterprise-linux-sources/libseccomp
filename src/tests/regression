@@ -21,8 +21,15 @@
 # along with this library; if not, see <http://www.gnu.org/licenses>.
 #
 
-GLBL_ARCH_LE_SUPPORT="x86 x86_64 x32 arm aarch64 mipsel mipsel64 mipsel64n32"
-GLBL_ARCH_BE_SUPPORT="mips mips64 mips64n32"
+GLBL_ARCH_LE_SUPPORT=" \
+	x86 x86_64 x32 \
+	arm aarch64 \
+	mipsel mipsel64 mipsel64n32 \
+	ppc64le"
+GLBL_ARCH_BE_SUPPORT=" \
+	mips mips64 mips64n32 \
+	ppc ppc64 \
+	s390 s390x"
 
 GLBL_SYS_ARCH="../tools/scmp_arch_detect"
 GLBL_SYS_RESOLVER="../tools/scmp_sys_resolver"
@@ -164,6 +171,33 @@ function get_range() {
 }
 
 #
+# Get the number sequence for a given range with increments of 1, i.e.
+# implement a specialized seq(1).
+#
+# We use our own implementation based on miniseq in favour to the standard seq
+# tool as, at least, seq of coreutils v8.23 and v8.24 has problems on 32 bit
+# ARM for large numbers (see the mailing thread at
+# https://groups.google.com/forum/#!topic/libseccomp/VtrClkXxLGA).
+#
+# Arguments:
+#     1    starting value
+#     2    last value
+#
+function get_seq() {
+	# NOTE: this whole thing is a bit hacky, but we need to search around
+	#       for miniseq to fix 'make distcheck', someday we should fix this
+	if [[ -x ./miniseq ]]; then
+		./miniseq "$1" "$2"
+	elif [[ -x $basedir/miniseq ]]; then
+		$basedir/miniseq "$1" "$2"
+	else
+		# we're often run from a subshell, so we can't simply exit
+		echo "error: unable to find miniseq" >&2
+		kill $pid
+	fi
+}
+
+#
 # Run the specified test command (with valgrind if requested)
 #
 # Arguments:
@@ -245,7 +279,7 @@ function run_test_bpf_sim_fuzz() {
 	local testname=${line[0]}
 	local stress_count=${line[1]}
 
-	for i in $(seq 1 $stress_count); do
+	for i in $(get_seq 1 $stress_count); do
 		local sys=$(generate_random_data)
 		local -a arg=($(generate_random_data) $(generate_random_data) \
 			      $(generate_random_data) $(generate_random_data) \
@@ -462,13 +496,13 @@ function run_test_bpf_sim() {
 		# and arg ranges and generate/run every combination of requested
 		# tests; if no ranges were specifed, then the single test is
 		# run
-		for sys in $(seq -f "%1.0f" $low_syscall $high_syscall); do
-		for arg0 in $(seq -f "%1.0f" ${low_arg[0]} ${high_arg[0]}); do
-		for arg1 in $(seq -f "%1.0f" ${low_arg[1]} ${high_arg[1]}); do
-		for arg2 in $(seq -f "%1.0f" ${low_arg[2]} ${high_arg[2]}); do
-		for arg3 in $(seq -f "%1.0f" ${low_arg[3]} ${high_arg[3]}); do
-		for arg4 in $(seq -f "%1.0f" ${low_arg[4]} ${high_arg[4]}); do
-		for arg5 in $(seq -f "%1.0f" ${low_arg[5]} ${high_arg[5]}); do
+		for sys in $(get_seq $low_syscall $high_syscall); do
+		for arg0 in $(get_seq ${low_arg[0]} ${high_arg[0]}); do
+		for arg1 in $(get_seq ${low_arg[1]} ${high_arg[1]}); do
+		for arg2 in $(get_seq ${low_arg[2]} ${high_arg[2]}); do
+		for arg3 in $(get_seq ${low_arg[3]} ${high_arg[3]}); do
+		for arg4 in $(get_seq ${low_arg[4]} ${high_arg[4]}); do
+		for arg5 in $(get_seq ${low_arg[5]} ${high_arg[5]}); do
 			local -a arg=($arg0 $arg1 $arg2 $arg3 $arg4 $arg5)
 
 			# Get the generated sub-test num string
@@ -667,7 +701,7 @@ function run_test_live() {
 
 	# setup the arch specific return values
 	case "$arch" in
-	x86|x86_64|x32|arm|aarch64)
+	x86|x86_64|x32|arm|aarch64|ppc|ppc64|ppc64le|ppc|s390|s390x)
 		rc_kill=159
 		rc_allow=160
 		rc_trap=161
@@ -827,7 +861,6 @@ function run_tests() {
 verify_deps head
 verify_deps sed
 verify_deps awk
-verify_deps seq
 verify_deps tr
 
 # global variables
@@ -852,6 +885,9 @@ stats_error=0
 
 # set the test root directory
 basedir=$(dirname $0)
+
+# set the test harness pid
+pid=$$
 
 # parse the command line
 while getopts "ab:gl:m:s:t:T:vh" opt; do

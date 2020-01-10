@@ -2,7 +2,7 @@
  * Architecture Detector
  *
  * Copyright (c) 2013 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -98,6 +98,21 @@ int main(int argc, char *argv[])
 			break;
 		case SCMP_ARCH_MIPSEL64N32:
 			printf("mipsel64n32\n");
+			break;
+		case SCMP_ARCH_PPC:
+			printf("ppc\n");
+			break;
+		case SCMP_ARCH_PPC64:
+			printf("ppc64\n");
+			break;
+		case SCMP_ARCH_PPC64LE:
+			printf("ppc64le\n");
+			break;
+		case SCMP_ARCH_S390:
+			printf("s390\n");
+			break;
+		case SCMP_ARCH_S390X:
+			printf("s390x\n");
 			break;
 		default:
 			printf("unknown\n");

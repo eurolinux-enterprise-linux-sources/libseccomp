@@ -19,7 +19,7 @@ dnl #
 dnl ####
 dnl libseccomp defines
 dnl ####
-AC_INIT([libseccomp], [2.2.1])
+AC_INIT([libseccomp], [2.3.1])
 
 dnl ####
 dnl autoconf configuration
@@ -89,12 +89,6 @@ AC_SUBST([VERSION_MINOR])
 AC_SUBST([VERSION_MICRO])
 
 dnl ####
-dnl function checks
-dnl ####
-dnl # NOTE: keep this disabled until we can test on a released 3.17 kernel
-dnl AC_CHECK_FUNCS(seccomp)
-
-dnl ####
 dnl cython checks
 dnl ####
 AC_CHECK_PROG(have_cython, cython, "yes", "no")
@@ -121,7 +115,7 @@ AS_IF([test "$enable_python" = yes], [
 ])
 AM_CONDITIONAL([ENABLE_PYTHON], [test "$enable_python" = yes])
 AC_DEFINE_UNQUOTED([ENABLE_PYTHON],
-	[$(test "$enable_python" == yes && echo 1 || echo 0)],
+	[$(test "$enable_python" = yes && echo 1 || echo 0)],
 	[Python bindings build flag.])
 
 dnl ####

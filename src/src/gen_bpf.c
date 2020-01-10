@@ -2,7 +2,7 @@
  * Seccomp BPF Translator
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -153,6 +153,8 @@ struct bpf_state {
 
 	/* filter attributes */
 	const struct db_filter_attr *attr;
+	/* bad arch action */
+	uint64_t bad_arch_hsh;
 	/* default action */
 	uint64_t def_hsh;
 
@@ -878,7 +880,6 @@ static struct bpf_blk *_gen_bpf_node(struct bpf_state *state,
 	case SCMP_CMP_NE:
 	case SCMP_CMP_LT:
 	case SCMP_CMP_LE:
-		/* if we hit here it means the filter db isn't correct */
 	default:
 		/* fatal error, we should never get here */
 		goto node_failure;
@@ -1352,22 +1353,26 @@ static struct bpf_blk *_gen_bpf_arch(struct bpf_state *state,
 			/* filter out x32 */
 			_BPF_INSTR(instr,
 				   _BPF_OP(state->arch, BPF_JMP + BPF_JGE),
-				   _BPF_JMP_NXT(blk_cnt++), _BPF_JMP_NO,
+				   _BPF_JMP_HSH(state->bad_arch_hsh),
+				   _BPF_JMP_NO,
 				   _BPF_K(state->arch, X32_SYSCALL_BIT));
 			if (b_head != NULL)
 				instr.jf = _BPF_JMP_HSH(b_head->hash);
 			else
 				instr.jf = _BPF_JMP_HSH(state->def_hsh);
+			blk_cnt++;
 		} else if (state->arch->token == SCMP_ARCH_X32) {
 			/* filter out x86_64 */
 			_BPF_INSTR(instr,
 				   _BPF_OP(state->arch, BPF_JMP + BPF_JGE),
-				   _BPF_JMP_NO, _BPF_JMP_NXT(blk_cnt++),
+				   _BPF_JMP_NO,
+				   _BPF_JMP_HSH(state->bad_arch_hsh),
 				   _BPF_K(state->arch, X32_SYSCALL_BIT));
 			if (b_head != NULL)
 				instr.jt = _BPF_JMP_HSH(b_head->hash);
 			else
 				instr.jt = _BPF_JMP_HSH(state->def_hsh);
+			blk_cnt++;
 		} else
 			/* we should never get here */
 			goto arch_failure;
@@ -1636,6 +1641,7 @@ static int _gen_bpf_build_bpf(struct bpf_state *state,
 	rc = _hsh_add(state, &b_badarch, 1);
 	if (rc < 0)
 		return rc;
+	state->bad_arch_hsh = b_badarch->hash;
 
 	/* generate the default action */
 	b_default = _gen_bpf_action(state, NULL, state->attr->act_default);

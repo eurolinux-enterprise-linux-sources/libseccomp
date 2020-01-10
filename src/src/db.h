@@ -1,8 +1,8 @@
 /**
  * Enhanced Seccomp Filter DB
  *
- * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Copyright (c) 2012,2016 Red Hat <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -33,11 +33,20 @@
 
 struct db_api_arg {
 	unsigned int arg;
-	unsigned int op;
+	enum scmp_compare op;
 	scmp_datum_t mask;
 	scmp_datum_t datum;
 
 	bool valid;
+};
+
+struct db_api_rule_list {
+	uint32_t action;
+	int syscall;
+	struct db_api_arg *args;
+	unsigned int args_cnt;
+
+	struct db_api_rule_list *prev, *next;
 };
 
 struct db_arg_chain_tree {
@@ -137,6 +146,17 @@ struct db_filter {
 
 	/* syscall filters, kept as a sorted single-linked list */
 	struct db_sys_list *syscalls;
+
+	/* list of rules used to build the filters, kept in order */
+	struct db_api_rule_list *rules;
+};
+
+struct db_filter_snap {
+	/* individual filters */
+	struct db_filter **filters;
+	unsigned int filter_cnt;
+
+	struct db_filter_snap *next;
 };
 
 struct db_filter_col {
@@ -150,6 +170,9 @@ struct db_filter_col {
 	int endian;
 	struct db_filter **filters;
 	unsigned int filter_cnt;
+
+	/* transaction snapshots */
+	struct db_filter_snap *snapshots;
 };
 
 /**
@@ -167,7 +190,7 @@ struct db_filter_col {
 int db_action_valid(uint32_t action);
 
 struct db_filter_col *db_col_init(uint32_t def_action);
-void db_col_reset(struct db_filter_col *col, uint32_t def_action);
+int db_col_reset(struct db_filter_col *col, uint32_t def_action);
 void db_col_release(struct db_filter_col *col);
 
 int db_col_valid(struct db_filter_col *col);
@@ -181,17 +204,21 @@ int db_col_attr_get(const struct db_filter_col *col,
 int db_col_attr_set(struct db_filter_col *col,
 		    enum scmp_filter_attr attr, uint32_t value);
 
+int db_col_db_new(struct db_filter_col *col, const struct arch_def *arch);
 int db_col_db_add(struct db_filter_col *col, struct db_filter *db);
 int db_col_db_remove(struct db_filter_col *col, uint32_t arch_token);
 
-struct db_filter *db_init(const struct arch_def *arch);
-void db_reset(struct db_filter *db);
-void db_release(struct db_filter *db);
+int db_col_rule_add(struct db_filter_col *col,
+		    bool strict, uint32_t action, int syscall,
+		    unsigned int arg_cnt, const struct scmp_arg_cmp *arg_array);
 
-int db_syscall_priority(struct db_filter *db,
-			unsigned int syscall, uint8_t priority);
+int db_col_syscall_priority(struct db_filter_col *col,
+			    int syscall, uint8_t priority);
 
-int db_rule_add(struct db_filter *db, uint32_t action, unsigned int syscall,
-		struct db_api_arg *chain);
+int db_col_transaction_start(struct db_filter_col *col);
+void db_col_transaction_abort(struct db_filter_col *col);
+void db_col_transaction_commit(struct db_filter_col *col);
+
+int db_rule_add(struct db_filter *db, const struct db_api_rule_list *rule);
 
 #endif

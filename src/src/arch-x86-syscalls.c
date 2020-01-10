@@ -2,7 +2,7 @@
  * Enhanced Seccomp x86 Syscall Table
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -26,13 +26,13 @@
 #include "arch.h"
 #include "arch-x86.h"
 
-/* NOTE: based on Linux 3.19 */
+/* NOTE: based on Linux 4.5-rc4 */
 const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "_llseek", 140 },
 	{ "_newselect", 142 },
 	{ "_sysctl", 149 },
 	{ "accept", __PNR_accept },
-	{ "accept4", __PNR_accept4 },
+	{ "accept4", 364 },
 	{ "access", 33 },
 	{ "acct", 51 },
 	{ "add_key", 286 },
@@ -43,7 +43,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "arm_sync_file_range", __PNR_arm_sync_file_range },
 	{ "arch_prctl", __PNR_arch_prctl },
 	{ "bdflush", 134 },
-	{ "bind", __PNR_bind },
+	{ "bind", 361 },
 	{ "bpf", 357 },
 	{ "break", 17 },
 	{ "breakpoint", __PNR_breakpoint },
@@ -64,7 +64,8 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "clock_settime", 264 },
 	{ "clone", 120 },
 	{ "close", 6 },
-	{ "connect", __PNR_connect },
+	{ "connect", 362 },
+	{ "copy_file_range", 377 },
 	{ "creat", 8 },
 	{ "create_module", 127 },
 	{ "delete_module", 129 },
@@ -134,7 +135,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "getgroups", 80 },
 	{ "getgroups32", 205 },
 	{ "getitimer", 105 },
-	{ "getpeername", __PNR_getpeername },
+	{ "getpeername", 368 },
 	{ "getpgid", 132 },
 	{ "getpgrp", 65 },
 	{ "getpid", 20 },
@@ -149,8 +150,8 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "getrlimit", 76 },
 	{ "getrusage", 77 },
 	{ "getsid", 147 },
-	{ "getsockname", __PNR_getsockname },
-	{ "getsockopt", __PNR_getsockopt },
+	{ "getsockname", 367 },
+	{ "getsockopt", 365 },
 	{ "gettid", 224 },
 	{ "gettimeofday", 78 },
 	{ "getuid", 24 },
@@ -184,7 +185,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "lgetxattr", 230 },
 	{ "link", 9 },
 	{ "linkat", 303 },
-	{ "listen", __PNR_listen },
+	{ "listen", 363 },
 	{ "listxattr", 232 },
 	{ "llistxattr", 233 },
 	{ "lock", 53 },
@@ -196,6 +197,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "lstat64", 196 },
 	{ "madvise", 219 },
 	{ "mbind", 274 },
+	{ "membarrier", 375 },
 	{ "memfd_create", 356 },
 	{ "migrate_pages", 294 },
 	{ "mincore", 218 },
@@ -204,6 +206,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "mknod", 14 },
 	{ "mknodat", 297 },
 	{ "mlock", 150 },
+	{ "mlock2", 376 },
 	{ "mlockall", 152 },
 	{ "mmap", 90 },
 	{ "mmap2", 192 },
@@ -224,6 +227,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "msgrcv", __PNR_msgrcv },
 	{ "msgsnd", __PNR_msgsnd },
 	{ "msync", 144 },
+	{ "multiplexer", __PNR_multiplexer },
 	{ "munlock", 151 },
 	{ "munlockall", 153 },
 	{ "munmap", 91 },
@@ -275,9 +279,9 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "readv", 145 },
 	{ "reboot", 88 },
 	{ "recv", __PNR_recv },
-	{ "recvfrom", __PNR_recvfrom },
+	{ "recvfrom", 371 },
 	{ "recvmmsg", 337 },
-	{ "recvmsg", __PNR_recvmsg },
+	{ "recvmsg", 372 },
 	{ "remap_file_pages", 257 },
 	{ "removexattr", 235 },
 	{ "rename", 38 },
@@ -294,6 +298,10 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "rt_sigsuspend", 179 },
 	{ "rt_sigtimedwait", 177 },
 	{ "rt_tgsigqueueinfo", 335 },
+	{ "rtas", __PNR_rtas },
+	{ "s390_pci_mmio_read", __PNR_s390_pci_mmio_read },
+	{ "s390_pci_mmio_write", __PNR_s390_pci_mmio_write },
+	{ "s390_runtime_instr", __PNR_s390_runtime_instr },
 	{ "sched_get_priority_max", 159 },
 	{ "sched_get_priority_min", 160 },
 	{ "sched_getaffinity", 242 },
@@ -317,8 +325,8 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "sendfile", 187 },
 	{ "sendfile64", 239 },
 	{ "sendmmsg", 345 },
-	{ "sendmsg", __PNR_sendmsg },
-	{ "sendto", __PNR_sendto },
+	{ "sendmsg", 370 },
+	{ "sendto", 369 },
 	{ "set_mempolicy", 276 },
 	{ "set_robust_list", 311 },
 	{ "set_thread_area", 243 },
@@ -348,7 +356,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "setreuid32", 203 },
 	{ "setrlimit", 75 },
 	{ "setsid", 66 },
-	{ "setsockopt", __PNR_setsockopt },
+	{ "setsockopt", 366 },
 	{ "settimeofday", 79 },
 	{ "setuid", 23 },
 	{ "setuid32", 213 },
@@ -358,7 +366,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "shmctl", __PNR_shmctl },
 	{ "shmdt", __PNR_shmdt },
 	{ "shmget", __PNR_shmget },
-	{ "shutdown", __PNR_shutdown },
+	{ "shutdown", 373 },
 	{ "sigaction", 67 },
 	{ "sigaltstack", 186 },
 	{ "signal", 48 },
@@ -368,10 +376,12 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "sigprocmask", 126 },
 	{ "sigreturn", 119 },
 	{ "sigsuspend", 72 },
-	{ "socket", __PNR_socket },
+	{ "socket", 359 },
 	{ "socketcall", 102 },
-	{ "socketpair", __PNR_socketpair },
+	{ "socketpair", 360 },
 	{ "splice", 313 },
+	{ "spu_create", __PNR_spu_create },
+	{ "spu_run", __PNR_spu_run },
 	{ "ssetmask", 69 },
 	{ "stat", 106 },
 	{ "stat64", 195 },
@@ -379,8 +389,11 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "statfs64", 268 },
 	{ "stime", 25 },
 	{ "stty", 31 },
+	{ "subpage_prot", __PNR_subpage_prot },
+	{ "swapcontext", __PNR_swapcontext },
 	{ "swapoff", 115 },
 	{ "swapon", 87 },
+	{ "switch_endian", __PNR_switch_endian },
 	{ "symlink", 83 },
 	{ "symlinkat", 304 },
 	{ "sync", 36 },
@@ -388,6 +401,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "sync_file_range2", __PNR_sync_file_range2 },
 	{ "syncfs", 344 },
 	{ "syscall", __PNR_syscall },
+	{ "sys_debug_setcontext", __PNR_sys_debug_setcontext },
 	{ "sysfs", 135 },
 	{ "sysinfo", 116 },
 	{ "syslog", 103 },
@@ -419,6 +433,7 @@ const struct arch_syscall_def x86_syscall_table[] = { \
 	{ "unlinkat", 301 },
 	{ "unshare", 310 },
 	{ "uselib", 86 },
+	{ "userfaultfd", 374 },
 	{ "usr26", __PNR_usr26 },
 	{ "usr32", __PNR_usr32 },
 	{ "ustat", 62 },
@@ -454,6 +469,48 @@ int x86_syscall_resolve_name(const char *name)
 	const struct arch_syscall_def *table = x86_syscall_table;
 
 	/* XXX - plenty of room for future improvement here */
+
+	if (strcmp(name, "accept") == 0)
+		return __PNR_accept;
+	if (strcmp(name, "accept4") == 0)
+		return __PNR_accept4;
+	else if (strcmp(name, "bind") == 0)
+		return __PNR_bind;
+	else if (strcmp(name, "connect") == 0)
+		return __PNR_connect;
+	else if (strcmp(name, "getpeername") == 0)
+		return __PNR_getpeername;
+	else if (strcmp(name, "getsockname") == 0)
+		return __PNR_getsockname;
+	else if (strcmp(name, "getsockopt") == 0)
+		return __PNR_getsockopt;
+	else if (strcmp(name, "listen") == 0)
+		return __PNR_listen;
+	else if (strcmp(name, "recv") == 0)
+		return __PNR_recv;
+	else if (strcmp(name, "recvfrom") == 0)
+		return __PNR_recvfrom;
+	else if (strcmp(name, "recvmsg") == 0)
+		return __PNR_recvmsg;
+	else if (strcmp(name, "recvmmsg") == 0)
+		return __PNR_recvmmsg;
+	else if (strcmp(name, "send") == 0)
+		return __PNR_send;
+	else if (strcmp(name, "sendmsg") == 0)
+		return __PNR_sendmsg;
+	else if (strcmp(name, "sendmmsg") == 0)
+		return __PNR_sendmmsg;
+	else if (strcmp(name, "sendto") == 0)
+		return __PNR_sendto;
+	else if (strcmp(name, "setsockopt") == 0)
+		return __PNR_setsockopt;
+	else if (strcmp(name, "shutdown") == 0)
+		return __PNR_shutdown;
+	else if (strcmp(name, "socket") == 0)
+		return __PNR_socket;
+	else if (strcmp(name, "socketpair") == 0)
+		return __PNR_socketpair;
+
 	for (iter = 0; table[iter].name != NULL; iter++) {
 		if (strcmp(name, table[iter].name) == 0)
 			return table[iter].num;
@@ -477,6 +534,48 @@ const char *x86_syscall_resolve_num(int num)
 	const struct arch_syscall_def *table = x86_syscall_table;
 
 	/* XXX - plenty of room for future improvement here */
+
+	if (num == __PNR_accept)
+		return "accept";
+	else if (num == __PNR_accept4)
+		return "accept4";
+	else if (num == __PNR_bind)
+		return "bind";
+	else if (num == __PNR_connect)
+		return "connect";
+	else if (num == __PNR_getpeername)
+		return "getpeername";
+	else if (num == __PNR_getsockname)
+		return "getsockname";
+	else if (num == __PNR_getsockopt)
+		return "getsockopt";
+	else if (num == __PNR_listen)
+		return "listen";
+	else if (num == __PNR_recv)
+		return "recv";
+	else if (num == __PNR_recvfrom)
+		return "recvfrom";
+	else if (num == __PNR_recvmsg)
+		return "recvmsg";
+	else if (num == __PNR_recvmmsg)
+		return "recvmmsg";
+	else if (num == __PNR_send)
+		return "send";
+	else if (num == __PNR_sendmsg)
+		return "sendmsg";
+	else if (num == __PNR_sendmmsg)
+		return "sendmmsg";
+	else if (num == __PNR_sendto)
+		return "sendto";
+	else if (num == __PNR_setsockopt)
+		return "setsockopt";
+	else if (num == __PNR_shutdown)
+		return "shutdown";
+	else if (num == __PNR_socket)
+		return "socket";
+	else if (num == __PNR_socketpair)
+		return "socketpair";
+
 	for (iter = 0; table[iter].num != __NR_SCMP_ERROR; iter++) {
 		if (num == table[iter].num)
 			return table[iter].name;

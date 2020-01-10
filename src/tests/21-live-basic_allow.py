@@ -4,7 +4,7 @@
 # Seccomp Library test program
 #
 # Copyright (c) 2013 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <pmoore@redhat.com>
+# Author: Paul Moore <paul@paul-moore.com>
 #
 
 #
@@ -46,6 +46,8 @@ def test():
     f.add_rule(ALLOW, "close")
     f.add_rule(ALLOW, "rt_sigaction")
     f.add_rule(ALLOW, "rt_sigreturn")
+    f.add_rule(ALLOW, "sigreturn")
+    f.add_rule(ALLOW, "brk")
     f.add_rule(ALLOW, "exit_group")
     f.load()
     try:

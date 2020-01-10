@@ -2,7 +2,7 @@
  * Tool utility functions
  *
  * Copyright (c) 2014 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -62,28 +62,24 @@
 #elif __MIPSEL__
 #define ARCH_NATIVE		AUDIT_ARCH_MIPSEL64N32
 #endif /* _MIPS_SIM_NABI32 */
+#elif __PPC64__
+#ifdef __BIG_ENDIAN__
+#define ARCH_NATIVE		AUDIT_ARCH_PPC64
+#else
+#define ARCH_NATIVE		AUDIT_ARCH_PPC64LE
+#endif
+#elif __PPC__
+#define ARCH_NATIVE		AUDIT_ARCH_PPC
+#elif __s390x__ /* s390x must be checked before s390 */
+#define ARCH_NATIVE		AUDIT_ARCH_S390X
+#elif __s390__
+#define ARCH_NATIVE		AUDIT_ARCH_S390
 #else
 #error the simulator code needs to know about your machine type
 #endif
 
 /* default to the native arch */
 uint32_t arch = ARCH_NATIVE;
-
-/**
- * Print the usage information to stderr and exit
- * @param program the name of the current program being invoked
- *
- * Print the usage information and exit with EINVAL.
- *
- */
-void exit_usage(const char *program)
-{
-	fprintf(stderr,
-		"usage: %s -f <bpf_file> [-v]"
-		" -a <arch> -s <syscall_num> [-0 <a0>] ... [-5 <a5>]\n",
-		program);
-	exit(EINVAL);
-}
 
 /**
  * Convert a 16-bit target integer into the host's endianess

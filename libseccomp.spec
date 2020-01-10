@@ -1,13 +1,15 @@
 Summary: Enhanced seccomp library
 Name: libseccomp
-Version: 2.2.1
-Release: 1%{?dist}
-ExclusiveArch: %{ix86} x86_64 %{arm} aarch64
+Version: 2.3.1
+Release: 3%{?dist}
+ExclusiveArch: %{ix86} x86_64 %{arm} aarch64 ppc ppc64 ppc64le s390 s390x
 License: LGPLv2
 Group: System Environment/Libraries
 Source: https://github.com/seccomp/libseccomp/releases/download/v%{version}/%{name}-%{version}.tar.gz
 URL: https://github.com/seccomp/libseccomp
+%ifnarch s390
 BuildRequires: valgrind
+%endif
 
 %description
 The libseccomp library provides an easy to use interface to the Linux Kernel's
@@ -69,6 +71,18 @@ make V=1 check
 %{_mandir}/man3/*
 
 %changelog
+* Wed Feb 22 2017 Paul Moore <pmoore@redhat.com> - 2.3.1-3
+- Added the ppc arch to the build
+
+* Thu Apr 28 2016 Paul Moore <pmoore@redhat.com> - 2.3.1-2
+- Fix a typo with the ppc64le architecture
+
+* Thu Apr 21 2016 Paul Moore <pmoore@redhat.com> - 2.3.1-1
+- Escape the macros in the changelog to make rpmlint and friends happy
+
+* Wed Apr 20 2016 Paul Moore <pmoore@redhat.com> - 2.3.1-0
+- New upstream version
+
 * Mon Jun 15 2015 Paul Moore <pmoore@redhat.com> - 2.2.1-1
 - Removed '--disable-static' from the build to ensure that scmp_sys_resolver
   is self contained and resolve RPATH issues
@@ -85,7 +99,7 @@ make V=1 check
 
 * Tue Nov  5 2013 Paul Moore <pmoore@redhat.com> - 2.1.1-0
 - New upstream version
-- Added a %check procedure for self-test during build
+- Added a %%check procedure for self-test during build
 * Tue Jun 11 2013 Paul Moore <pmoore@redhat.com> - 2.1.0-0
 - New upstream version
 - Added support for the ARM architecture

@@ -2,7 +2,7 @@
  * Enhanced Seccomp Architecture/Machine Specific Code
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -38,6 +38,11 @@
 #include "arch-mips.h"
 #include "arch-mips64.h"
 #include "arch-mips64n32.h"
+#include "arch-ppc.h"
+#include "arch-ppc64.h"
+#include "arch-s390.h"
+#include "arch-s390x.h"
+#include "db.h"
 #include "system.h"
 
 #define default_arg_count_max		6
@@ -74,6 +79,18 @@ const struct arch_def *arch_def_native = &arch_def_mips64n32;
 #elif __MIPSEL__
 const struct arch_def *arch_def_native = &arch_def_mipsel64n32;
 #endif /* _MIPS_SIM_NABI32 */
+#elif __PPC64__
+#ifdef __BIG_ENDIAN__
+const struct arch_def *arch_def_native = &arch_def_ppc64;
+#else
+const struct arch_def *arch_def_native = &arch_def_ppc64le;
+#endif
+#elif __PPC__
+const struct arch_def *arch_def_native = &arch_def_ppc;
+#elif __s390x__ /* s390x must be checked before s390 */
+const struct arch_def *arch_def_native = &arch_def_s390x;
+#elif __s390__
+const struct arch_def *arch_def_native = &arch_def_s390;
 #else
 #error the arch code needs to know about your machine type
 #endif /* machine type guess */
@@ -122,6 +139,16 @@ const struct arch_def *arch_def_lookup(uint32_t token)
 		return &arch_def_mips64n32;
 	case SCMP_ARCH_MIPSEL64N32:
 		return &arch_def_mipsel64n32;
+	case SCMP_ARCH_PPC:
+		return &arch_def_ppc;
+	case SCMP_ARCH_PPC64:
+		return &arch_def_ppc64;
+	case SCMP_ARCH_PPC64LE:
+		return &arch_def_ppc64le;
+	case SCMP_ARCH_S390:
+		return &arch_def_s390;
+	case SCMP_ARCH_S390X:
+		return &arch_def_s390x;
 	}
 
 	return NULL;
@@ -158,6 +185,16 @@ const struct arch_def *arch_def_lookup_name(const char *arch_name)
 		return &arch_def_mips64n32;
 	else if (strcmp(arch_name, "mipsel64n32") == 0)
 		return &arch_def_mipsel64n32;
+	else if (strcmp(arch_name, "ppc") == 0)
+		return &arch_def_ppc;
+	else if (strcmp(arch_name, "ppc64") == 0)
+		return &arch_def_ppc64;
+	else if (strcmp(arch_name, "ppc64le") == 0)
+		return &arch_def_ppc64le;
+	else if (strcmp(arch_name, "s390") == 0)
+		return &arch_def_s390;
+	else if (strcmp(arch_name, "s390x") == 0)
+		return &arch_def_s390x;
 
 	return NULL;
 }
@@ -256,27 +293,8 @@ int arch_arg_offset(const struct arch_def *arch, unsigned int arg)
  */
 int arch_syscall_resolve_name(const struct arch_def *arch, const char *name)
 {
-	switch (arch->token) {
-	case SCMP_ARCH_X86:
-		return x86_syscall_resolve_name(name);
-	case SCMP_ARCH_X86_64:
-		return x86_64_syscall_resolve_name(name);
-	case SCMP_ARCH_X32:
-		return x32_syscall_resolve_name(name);
-	case SCMP_ARCH_ARM:
-		return arm_syscall_resolve_name(name);
-	case SCMP_ARCH_AARCH64:
-		return aarch64_syscall_resolve_name(name);
-	case SCMP_ARCH_MIPS:
-	case SCMP_ARCH_MIPSEL:
-		return mips_syscall_resolve_name(name);
-	case SCMP_ARCH_MIPS64:
-	case SCMP_ARCH_MIPSEL64:
-		return mips64_syscall_resolve_name(name);
-	case SCMP_ARCH_MIPS64N32:
-	case SCMP_ARCH_MIPSEL64N32:
-		return mips64n32_syscall_resolve_name(name);
-	}
+	if (arch->syscall_resolve_name)
+		return (*arch->syscall_resolve_name)(name);
 
 	return __NR_SCMP_ERROR;
 }
@@ -293,27 +311,8 @@ int arch_syscall_resolve_name(const struct arch_def *arch, const char *name)
  */
 const char *arch_syscall_resolve_num(const struct arch_def *arch, int num)
 {
-	switch (arch->token) {
-	case SCMP_ARCH_X86:
-		return x86_syscall_resolve_num(num);
-	case SCMP_ARCH_X86_64:
-		return x86_64_syscall_resolve_num(num);
-	case SCMP_ARCH_X32:
-		return x32_syscall_resolve_num(num);
-	case SCMP_ARCH_ARM:
-		return arm_syscall_resolve_num(num);
-	case SCMP_ARCH_AARCH64:
-		return aarch64_syscall_resolve_num(num);
-	case SCMP_ARCH_MIPS:
-	case SCMP_ARCH_MIPSEL:
-		return mips_syscall_resolve_num(num);
-	case SCMP_ARCH_MIPS64:
-	case SCMP_ARCH_MIPSEL64:
-		return mips64_syscall_resolve_num(num);
-	case SCMP_ARCH_MIPS64N32:
-	case SCMP_ARCH_MIPSEL64N32:
-		return mips64n32_syscall_resolve_num(num);
-	}
+	if (arch->syscall_resolve_num)
+		return (*arch->syscall_resolve_num)(num);
 
 	return NULL;
 }
@@ -351,18 +350,15 @@ int arch_syscall_translate(const struct arch_def *arch, int *syscall)
 /**
  * Rewrite a syscall value to match the architecture
  * @param arch the architecture definition
- * @param strict strict flag
  * @param syscall the syscall number
  *
  * Syscalls can vary across different architectures so this function rewrites
- * the syscall into the correct value for the specified architecture.  If
- * @strict is true then the function will fail if the syscall can not be
- * preservered, however, if @strict is false the function will do a "best
- * effort" rewrite and not fail. Returns zero on success, negative values on
- * failure.
+ * the syscall into the correct value for the specified architecture. Returns
+ * zero on success, -EDOM if the syscall is not defined for @arch, and negative
+ * values on failure.
  *
  */
-int arch_syscall_rewrite(const struct arch_def *arch, bool strict, int *syscall)
+int arch_syscall_rewrite(const struct arch_def *arch, int *syscall)
 {
 	int sys = *syscall;
 
@@ -374,58 +370,104 @@ int arch_syscall_rewrite(const struct arch_def *arch, bool strict, int *syscall)
 		return -EINVAL;
 	} else if (sys <= -100 && sys > -10000) {
 		/* rewritable syscalls */
-		switch (arch->token) {
-		case SCMP_ARCH_X86:
-			return x86_syscall_rewrite(arch, strict, syscall);
-		}
-		/* NOTE: we fall through to the default handling (strict?) if
-		 *       we don't support any rewriting for the architecture */
+		if (arch->syscall_rewrite)
+			(*arch->syscall_rewrite)(syscall);
 	}
 
 	/* syscalls not defined on this architecture */
-	if (strict)
+	if ((*syscall) < 0)
 		return -EDOM;
 	return 0;
 }
 
 /**
- * Rewrite a filter rule to match the architecture specifics
- * @param arch the architecture definition
- * @param strict strict flag
+ * Add a new rule to the specified filter
+ * @param col the filter collection
+ * @param db the seccomp filter db
+ * @param strict the strict flag
+ * @param action the filter action
  * @param syscall the syscall number
+ * @param chain_len the number of argument filters in the argument filter chain
  * @param chain the argument filter chain
  *
- * Syscalls can vary across different architectures so this function handles
- * the necessary seccomp rule rewrites to ensure the right thing is done
- * regardless of the rule or architecture.  If @strict is true then the
- * function will fail if the entire filter can not be preservered, however,
- * if @strict is false the function will do a "best effort" rewrite and not
- * fail.  Returns zero on success, negative values on failure.
+ * This function adds a new argument/comparison/value to the seccomp filter for
+ * a syscall; multiple arguments can be specified and they will be chained
+ * together (essentially AND'd together) in the filter.  When the strict flag
+ * is true the function will fail if the exact rule can not be added to the
+ * filter, if the strict flag is false the function will not fail if the
+ * function needs to adjust the rule due to architecture specifics.  Returns
+ * zero on success, negative values on failure.
  *
  */
-int arch_filter_rewrite(const struct arch_def *arch,
-			bool strict, int *syscall, struct db_api_arg *chain)
+int arch_filter_rule_add(struct db_filter_col *col, struct db_filter *db,
+			 bool strict, uint32_t action, int syscall,
+			 unsigned int chain_len, struct db_api_arg *chain)
 {
-	int sys = *syscall;
+	int rc;
+	size_t chain_size = sizeof(*chain) * chain_len;
+	struct db_api_rule_list *rule, *rule_tail;
 
-	if (sys >= 0) {
-		/* we shouldn't be here - no rewrite needed */
-		return 0;
-	} else if (sys < 0 && sys > -100) {
-		/* reserved values */
+	/* ensure we aren't using any reserved syscall values */
+	if (syscall < 0 && syscall > -100)
 		return -EINVAL;
-	} else if (sys <= -100 && sys > -10000) {
-		/* rewritable syscalls */
-		switch (arch->token) {
-		case SCMP_ARCH_X86:
-			return x86_filter_rewrite(arch, strict, syscall, chain);
-		}
-		/* NOTE: we fall through to the default handling (strict?) if
-		 *       we don't support any rewriting for the architecture */
-	}
 
-	/* syscalls not defined on this architecture */
-	if (strict)
-		return -EDOM;
+	/* translate the syscall */
+	rc = arch_syscall_translate(db->arch, &syscall);
+	if (rc < 0)
+		return rc;
+
+	/* copy of the chain for each filter in the collection */
+	rule = malloc(sizeof(*rule));
+	if (rule == NULL)
+		return -ENOMEM;
+	rule->args = malloc(chain_size);
+	if (rule->args == NULL) {
+		free(rule);
+		return -ENOMEM;
+	}
+	rule->action = action;
+	rule->syscall = syscall;
+	rule->args_cnt = chain_len;
+	memcpy(rule->args, chain, chain_size);
+	rule->prev = NULL;
+	rule->next = NULL;
+
+	/* add the new rule to the existing filter */
+	if (db->arch->rule_add == NULL) {
+		/* negative syscalls require a db->arch->rule_add() function */
+		if (syscall < 0 && strict) {
+			rc = -EDOM;
+			goto rule_add_failure;
+		}
+		rc = db_rule_add(db, rule);
+	} else
+		rc = (db->arch->rule_add)(col, db, strict, rule);
+	if (rc == 0) {
+		/* insert the chain to the end of the filter's rule list */
+		rule_tail = rule;
+		while (rule_tail->next)
+			rule_tail = rule_tail->next;
+		if (db->rules != NULL) {
+			rule->prev = db->rules->prev;
+			rule_tail->next = db->rules;
+			db->rules->prev->next = rule;
+			db->rules->prev = rule_tail;
+		} else {
+			rule->prev = rule_tail;
+			rule_tail->next = rule;
+			db->rules = rule;
+		}
+	} else
+		goto rule_add_failure;
+
 	return 0;
+
+rule_add_failure:
+	do {
+		rule_tail = rule;
+		rule = rule->next;
+		free(rule_tail->args);
+		free(rule_tail);
+	} while (rule);
+	return rc;
 }

@@ -4,7 +4,7 @@
 # Enhanced Seccomp Library Python Module Build Script
 #
 # Copyright (c) 2012 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <pmoore@redhat.com>
+# Author: Paul Moore <paul@paul-moore.com>
 #
 
 #
@@ -32,7 +32,7 @@ setup(
 	version = os.environ["VERSION_RELEASE"],
 	description = "Python binding for libseccomp",
 	long_description = "Python API for the Linux Kernel's syscall filtering capability, seccomp.",
-	url = "http://libseccomp.sf.net",
+	url = "https://github.com/seccomp/libseccomp",
 	maintainer = "Paul Moore",
 	maintainer_email = "paul@paul-moore.com",
 	license = "LGPLv2.1",

@@ -4,7 +4,7 @@
 # Seccomp Library test program
 #
 # Copyright (c) 2012 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <pmoore@redhat.com>
+# Author: Paul Moore <paul@paul-moore.com>
 #
 
 #
@@ -39,6 +39,7 @@ def test(args):
     f.add_arch(Arch("mipsel"))
     f.add_arch(Arch("mipsel64"))
     f.add_arch(Arch("mipsel64n32"))
+    f.add_arch(Arch("ppc64le"))
     f.add_rule(ALLOW, "read", Arg(0, EQ, sys.stdin.fileno()))
     f.add_rule(ALLOW, "write", Arg(0, EQ, sys.stdout.fileno()))
     f.add_rule(ALLOW, "write", Arg(0, EQ, sys.stderr.fileno()))

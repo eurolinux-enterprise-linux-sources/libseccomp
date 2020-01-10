@@ -2,7 +2,7 @@
  * Enhanced Seccomp x86 Specific Code
  *
  * Copyright (c) 2012 Red Hat <pmoore@redhat.com>
- * Author: Paul Moore <pmoore@redhat.com>
+ * Author: Paul Moore <paul@paul-moore.com>
  */
 
 /*
@@ -35,9 +35,9 @@ const char *x86_syscall_resolve_num(int num);
 
 const char *x86_syscall_iterate_name(unsigned int spot);
 
-int x86_syscall_rewrite(const struct arch_def *arch, bool strict, int *syscall);
+int x86_syscall_rewrite(int *syscall);
 
-int x86_filter_rewrite(const struct arch_def *arch, bool strict,
-		       int *syscall, struct db_api_arg *chain);
+int x86_rule_add(struct db_filter_col *col, struct db_filter *db, bool strict,
+		 struct db_api_rule_list *rule);
 
 #endif

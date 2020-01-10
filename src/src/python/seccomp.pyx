@@ -2,7 +2,7 @@
 # Seccomp Library Python Bindings
 #
 # Copyright (c) 2012,2013 Red Hat <pmoore@redhat.com>
-# Author: Paul Moore <pmoore@redhat.com>
+# Author: Paul Moore <paul@paul-moore.com>
 #
 
 #
@@ -147,6 +147,8 @@ cdef class Arch:
     MIPSEL - MIPS little endian O32 ABI
     MIPSEL64 - MIPS little endian 64-bit ABI
     MIPSEL64N32 - MIPS little endian N32 ABI
+    PPC64 - 64-bit PowerPC
+    PPC - 32-bit PowerPC
     """
 
     cdef int _token
@@ -163,6 +165,11 @@ cdef class Arch:
     MIPSEL = libseccomp.SCMP_ARCH_MIPSEL
     MIPSEL64 = libseccomp.SCMP_ARCH_MIPSEL64
     MIPSEL64N32 = libseccomp.SCMP_ARCH_MIPSEL64N32
+    PPC = libseccomp.SCMP_ARCH_PPC
+    PPC64 = libseccomp.SCMP_ARCH_PPC64
+    PPC64LE = libseccomp.SCMP_ARCH_PPC64LE
+    S390 = libseccomp.SCMP_ARCH_S390
+    S390X = libseccomp.SCMP_ARCH_S390X
 
     def __cinit__(self, arch=libseccomp.SCMP_ARCH_NATIVE):
         """ Initialize the architecture object.
@@ -198,6 +205,16 @@ cdef class Arch:
                 self._token = libseccomp.SCMP_ARCH_MIPSEL64
             elif arch == libseccomp.SCMP_ARCH_MIPSEL64N32:
                 self._token = libseccomp.SCMP_ARCH_MIPSEL64N32
+            elif arch == libseccomp.SCMP_ARCH_PPC:
+                self._token = libseccomp.SCMP_ARCH_PPC
+            elif arch == libseccomp.SCMP_ARCH_PPC64:
+                self._token = libseccomp.SCMP_ARCH_PPC64
+            elif arch == libseccomp.SCMP_ARCH_PPC64LE:
+                self._token = libseccomp.SCMP_ARCH_PPC64LE
+            elif arch == libseccomp.SCMP_ARCH_S390:
+                self._token = libseccomp.SCMP_ARCH_S390
+            elif arch == libseccomp.SCMP_ARCH_S390X:
+                self._token = libseccomp.SCMP_ARCH_S390X
             else:
                 self._token = 0;
         elif isinstance(arch, basestring):
@@ -223,10 +240,12 @@ cdef class Attr:
     ACT_DEFAULT - the filter's default action
     ACT_BADARCH - the filter's bad architecture action
     CTL_NNP - the filter's "no new privileges" flag
+    CTL_NNP - the filter's thread sync flag
     """
     ACT_DEFAULT = libseccomp.SCMP_FLTATR_ACT_DEFAULT
     ACT_BADARCH = libseccomp.SCMP_FLTATR_ACT_BADARCH
     CTL_NNP = libseccomp.SCMP_FLTATR_CTL_NNP
+    CTL_TSYNC = libseccomp.SCMP_FLTATR_CTL_TSYNC
 
 cdef class Arg:
     """ Python object representing a SyscallFilter syscall argument.
